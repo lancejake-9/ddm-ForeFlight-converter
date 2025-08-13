@@ -1,56 +1,92 @@
-// service-worker.js
-const CACHE = 'pwa-v2';
-const OFFLINE_URL = './offline.html';
+// service-worker.js (GitHub Pages friendly)
+const CACHE_NAME = "ddm-ff-v3";
 
-// List files that should be available offline.
-// If you don't have style.css or script.js, delete those lines.
-// If you have extra images/icons, add them here.
-const PRECACHE = [
-  './',                       // root (works well on GitHub Pages)
-  './index.html',
-  './manifest.webmanifest',
-  './offline.html',
-  './style.css',              // remove if not used
-  './script.js',              // remove if not used
-  './icons/apple-touch-icon-180.png' // adjust to your actual icon path(s)
+// This computes your repo root on GitHub Pages, e.g. "/ddm-ForeFlight-converter/"
+const BASE = new URL(".", self.location).pathname;
+
+// List the key files to guarantee first-load offline
+const PRECACHE_URLS = [
+  BASE,                          // "/ddm-ForeFlight-converter/"
+  BASE + "index.html",
+  BASE + "manifest.webmanifest",
+  BASE + "favicon.ico",
+  BASE + "icons/apple-touch-icon-180.png",
+  // Add any other files your app needs to run offline:
+  // BASE + "styles.css",
+  // BASE + "script.js",
 ];
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(PRECACHE))
-  );
+self.addEventListener("install", (event) => {
+  // Instantly activate this new SW on first load
   self.skipWaiting();
-});
-
-self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.map(k => (k === CACHE ? null : caches.delete(k))))
-    )
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
   );
-  self.clients.claim();
 });
 
-self.addEventListener('fetch', (event) => {
+self.addEventListener("activate", (event) => {
+  // Take control of open pages immediately
+  event.waitUntil(
+    (async () => {
+      // Clean up old caches
+      const keys = await caches.keys();
+      await Promise.all(
+        keys
+          .filter((k) => k !== CACHE_NAME)
+          .map((k) => caches.delete(k))
+      );
+      await self.clients.claim();
+    })()
+  );
+});
+
+// Cache-first for everything under your repo path, with network fallback.
+// Also warms the cache with any new files fetched at runtime.
+self.addEventListener("fetch", (event) => {
   const req = event.request;
+  const url = new URL(req.url);
 
-  // Treat navigations (HTML pages) specially: network-first, then offline fallback
-  const isHTML = req.mode === 'navigate' ||
-                 (req.headers.get('accept') || '').includes('text/html');
+  // Only handle requests within your GitHub Pages repo path
+  if (!url.pathname.startsWith(BASE)) return;
 
-  if (isHTML) {
+  // For navigations (address bar / home-screen launches), try cache -> network -> cached index.html
+  if (req.mode === "navigate") {
     event.respondWith(
-      fetch(req).catch(async () => {
-        const cache = await caches.open(CACHE);
-        const cached = await cache.match(req);
-        return cached || cache.match(OFFLINE_URL);
-      })
+      (async () => {
+        const cache = await caches.open(CACHE_NAME);
+        const cached = await cache.match(BASE + "index.html");
+        // Try cache first for instant feel
+        if (cached) return cached;
+
+        try {
+          const fresh = await fetch(req);
+          // If it worked, also save index.html for later
+          cache.put(BASE + "index.html", fresh.clone());
+          return fresh;
+        } catch {
+          // Last resort: whatever index.html we have
+          return cached || new Response("Offline", { status: 503 });
+        }
+      })()
     );
     return;
   }
 
-  // Everything else (CSS/JS/images): cache-first
+  // For other requests (CSS/JS/icons), cache-first with network fallback + runtime warmup
   event.respondWith(
-    caches.match(req).then(cached => cached || fetch(req))
+    (async () => {
+      const cache = await caches.open(CACHE_NAME);
+      const cached = await cache.match(req);
+      if (cached) return cached;
+      try {
+        const fresh = await fetch(req);
+        // Warm the cache so future loads are instant offline
+        cache.put(req, fresh.clone());
+        return fresh;
+      } catch {
+        // If offline and not cached, fail gracefully
+        return cached || new Response("Offline", { status: 503 });
+      }
+    })()
   );
 });
