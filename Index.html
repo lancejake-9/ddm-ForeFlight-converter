@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DDM → ForeFlight (Decimal Degrees)</title>
+  <style>
+    :root { font-family: -apple-system, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+    body { margin: 18px; line-height: 1.35; }
+    h1 { font-size: 1.25rem; margin: 0 0 12px; }
+    .card { border: 1px solid #ddd; border-radius: 10px; padding: 14px; margin: 10px 0 16px; }
+    label { display:block; font-weight:600; margin:10px 0 6px; }
+    input, textarea { width: 100%; font-size: 16px; padding: 10px; border:1px solid #ccc; border-radius:8px; }
+    textarea { min-height: 120px; }
+    .row { display:flex; gap:10px; }
+    .row > div { flex:1; }
+    button { font-size:16px; padding:11px 14px; border:1px solid #222; background:#fff; border-radius:10px; }
+    button.primary { background:#222; color:#fff; }
+    .out { background:#f8f8f8; padding:10px; border-radius:8px; word-break:break-all; }
+    .small { color:#666; font-size:0.9rem; }
+  </style>
+</head>
+<body>
+  <h1>DDM → ForeFlight Converter</h1>
+  <div class="card">
+    <div class="row">
+      <div>
+        <label for="lat">Latitude (DDM)</label>
+        <input id="lat" placeholder="e.g. 43° 00.100' N or N 43 00.100" />
+      </div>
+      <div>
+        <label for="lon">Longitude (DDM)</label>
+        <input id="lon" placeholder="e.g. 122° 22.400' W or W 122 22.400" />
+      </div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="primary" id="convertBtn">Convert</button>
+      <button id="copyBtn">Copy “lat, lon”</button>
+      <button id="clearBtn">Clear</button>
+    </div>
+    <div style="margin-top:12px">
+      <div class="out" id="out">Result will appear here</div>
+      <div class="small" id="notes"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <label for="bulk">Bulk (one pair per line). Accepts either “lat, lon” in DDM or two values separated by space/comma.</label>
+    <textarea id="bulk" placeholder="43° 00.100' N, 122° 22.400' W
+N 43 00.100, W 122 22.400
+43 00.100 N  122 22.400 W"></textarea>
+    <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="primary" id="bulkBtn">Convert Lines</button>
+      <button id="bulkCopyBtn">Copy All</button>
+    </div>
+    <div class="out" id="bulkOut" style="margin-top:12px; white-space:pre-wrap">Converted lines will appear here</div>
+  </div>
+
+<script>
+/*
+  Parse DDM like:
+   - 43° 00.100' N
+   - N 43 00.100
+   - 43 00.100N
+   - 122°22.400'W
+  Returns signed decimal degrees, or throws with a friendly message.
+*/
+function parseDDMToDecimal(s, isLat = null) {
+  if (!s || !s.trim()) throw new Error("Empty value.");
+  const str = s.trim().replace(/\s+/g, ''); // simplify parsing, keep signs/letters
+  // Grab hemisphere if present
+  const hemiMatch = str.match(/([NSEW])/i);
+  const hemi = hemiMatch ? hemiMatch[1].toUpperCase() : null;
+
+  // Extract degrees + minutes (minutes may be decimal). Allow separators ° ' or non-digits.
+  // Example matches: 43°00.100', 43 00.100, 122d22.4
+  const dm = str.replace(/[NSEW]/ig,'').match(/^(-?\d{1,3})\D*?(\d{1,2}(?:\.\d+)?)$/);
+  if (!dm) {
+    // Try the pattern with explicit separators remaining
+    const dm2 = str.replace(/[NSEW]/ig,'').match(/^(-?\d{1,3})[^0-9\-]+(\d{1,2}(?:\.\d+)?)/);
+    if (!dm2) throw new Error("Couldn’t find degrees and minutes. Use like 43°00.100'N");
+    return finalize(dm2, hemi, isLat);
+  }
+  return finalize(dm, hemi, isLat);
+
+  function finalize(m, hemi, isLat) {
+    let deg = Number(m[1]);
+    const minutes = Number(m[2]);
+    if (Number.isNaN(deg) || Number.isNaN(minutes)) throw new Error("Invalid numbers.");
+    // Range sanity
+    if (minutes < 0 || minutes >= 60) throw new Error("Minutes must be 0–59.999…");
+    if (isLat === true && (Math.abs(deg) > 90)) throw new Error("Latitude degrees must be ≤ 90.");
+    if (isLat === false && (Math.abs(deg) > 180)) throw new Error("Longitude degrees must be ≤ 180.");
+
+    let decimal = Math.abs(deg) + minutes/60;
+    // Determine sign from hemisphere or degree sign
+    if (hemi === 'S' || hemi === 'W') decimal = -decimal;
+    if (!hemi && deg < 0) decimal = -decimal;
+
+    // If isLat known, clamp sign based on typical hemispheres if no hemi given (optional)
+    // Not enforcing; ForeFlight accepts either hemisphere or sign.
+
+    return decimal;
+  }
+}
+
+// Format helpers
+const fmt6 = n => (Math.round(n * 1e6) / 1e6).toFixed(6);
+
+function convertSingle() {
+  const latIn = document.getElementById('lat').value;
+  const lonIn = document.getElementById('lon').value;
+  const out = document.getElementById('out');
+  const notes = document.getElementById('notes');
+
+  try {
+    const lat = parseDDMToDecimal(latIn, true);
+    const lon = parseDDMToDecimal(lonIn, false);
+
+    const pairComma = `${fmt6(lat)}, ${fmt6(lon)}`; // ForeFlight-friendly
+    const pairSpace = `${fmt6(lat)} ${fmt6(lon)}`;
+
+    out.textContent = `Decimal degrees (paste into ForeFlight): ${pairComma}\nAlt: ${pairSpace}`;
+    notes.textContent = "Tip: Tap “Copy” to put “lat, lon” on your clipboard.";
+    return pairComma;
+  } catch (e) {
+    out.textContent = "Error: " + e.message;
+    notes.textContent = "";
+    throw e;
+  }
+}
+
+function convertBulk() {
+  const lines = document.getElementById('bulk').value.split(/\r?\n/);
+  const results = [];
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) { results.push(""); continue; }
+    try {
+      // Accept either "lat, lon" or "lat ... lon"
+      // Split by comma first; if not, split by whitespace into two tokens.
+      let latStr, lonStr;
+      if (line.includes(',')) {
+        const parts = line.split(',');
+        latStr = parts[0];
+        lonStr = parts.slice(1).join(','); // in case comma in minutes formatting
+      } else {
+        const parts = line.split(/\s{1,}/);
+        if (parts.length < 2) throw new Error("Need both lat and lon on one line.");
+        latStr = parts[0];
+        lonStr = parts.slice(1).join(' ');
+      }
+      const lat = parseDDMToDecimal(latStr, true);
+      const lon = parseDDMToDecimal(lonStr, false);
+      results.push(`${fmt6(lat)}, ${fmt6(lon)}`);
+    } catch (e) {
+      results.push(`ERROR: ${e.message}  ⟵ "${line}"`);
+    }
+  }
+  document.getElementById('bulkOut').textContent = results.join('\n');
+  return results.join('\n');
+}
+
+// Wire up buttons
+document.getElementById('convertBtn').addEventListener('click', () => {
+  try { convertSingle(); } catch {}
+});
+document.getElementById('copyBtn').addEventListener('click', async () => {
+  try {
+    const text = convertSingle();
+    await navigator.clipboard.writeText(text);
+    alert('Copied: ' + text);
+  } catch {}
+});
+document.getElementById('clearBtn').addEventListener('click', () => {
+  ['lat','lon','out','notes'].forEach(id=>{
+    if (id==='out') document.getElementById(id).textContent = 'Result will appear here';
+    else if (id==='notes') document.getElementById(id).textContent = '';
+    else document.getElementById(id).value = '';
+  });
+});
+
+document.getElementById('bulkBtn').addEventListener('click', () => convertBulk());
+document.getElementById('bulkCopyBtn').addEventListener('click', async () => {
+  const text = convertBulk();
+  try { await navigator.clipboard.writeText(text); alert('Copied results'); } catch {}
+});
+
+// Prefill example for quick test
+window.addEventListener('load', () => {
+  document.getElementById('lat').value = "43° 00.100' N";
+  document.getElementById('lon').value = "122° 22.400' W";
+  document.getElementById('bulk').value =
+`43° 00.100' N, 122° 22.400' W
+N 43 00.100, W 122 22.400`;
+});
+</script>
+</body>
+</html>
