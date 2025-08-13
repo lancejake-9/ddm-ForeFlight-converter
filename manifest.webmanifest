@@ -1,7 +1,7 @@
 {
   "name": "DDM → ForeFlight Converter",
   "short_name": "DDM Converter",
-  "start_url": ".",
+  "start_url": "./index.html"
   "display": "standalone",
   "background_color": "#0b3d91",
   "theme_color": "#0b3d91",
