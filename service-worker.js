@@ -1,71 +1,56 @@
-/* service-worker.js */
-const CACHE_NAME = 'ddm-ff-v1';
+// service-worker.js
+const CACHE = 'pwa-v2';
+const OFFLINE_URL = './offline.html';
 
-// List the files you want cached for offline.
-// If any of these don't exist, the install will still succeed (we skip missing ones).
-const ASSETS = [
-  '/',                       // root
-  '/index.html',
-  '/manifest.webmanifest',
-  '/favicon.ico',
-
-  // icons
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-
-  // your app files (rename/remove if different)
-  '/styles.css',
-  '/script.js',
+// List files that should be available offline.
+// If you don't have style.css or script.js, delete those lines.
+// If you have extra images/icons, add them here.
+const PRECACHE = [
+  './',                       // root (works well on GitHub Pages)
+  './index.html',
+  './manifest.webmanifest',
+  './offline.html',
+  './style.css',              // remove if not used
+  './script.js',              // remove if not used
+  './icons/apple-touch-icon-180.png' // adjust to your actual icon path(s)
 ];
-
-// Convert to absolute URLs so it works on GitHub Pages subpaths
-const toURL = (p) => new URL(p, self.location).toString();
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(async (cache) => {
-      const urls = ASSETS.map(toURL);
-      // Add each asset but don't fail the install if some are missing
-      const results = await Promise.allSettled(urls.map((u) => cache.add(u)));
-      // Optional: log misses to help debugging
-      results.forEach((r, i) => {
-        if (r.status === 'rejected') console.warn('SW skipped missing asset:', urls[i]);
-      });
-    })
+    caches.open(CACHE).then((cache) => cache.addAll(PRECACHE))
   );
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.map((k) => (k === CACHE_NAME ? null : caches.delete(k))))
+    caches.keys().then(keys =>
+      Promise.all(keys.map(k => (k === CACHE ? null : caches.delete(k))))
     )
   );
   self.clients.claim();
 });
 
-// Cache-first for same-origin GET requests. Network updates cache in background.
 self.addEventListener('fetch', (event) => {
   const req = event.request;
-  if (req.method !== 'GET') return;
 
-  const url = new URL(req.url);
+  // Treat navigations (HTML pages) specially: network-first, then offline fallback
+  const isHTML = req.mode === 'navigate' ||
+                 (req.headers.get('accept') || '').includes('text/html');
 
-  // Only handle same-origin requests
-  if (url.origin !== self.location.origin) return;
+  if (isHTML) {
+    event.respondWith(
+      fetch(req).catch(async () => {
+        const cache = await caches.open(CACHE);
+        const cached = await cache.match(req);
+        return cached || cache.match(OFFLINE_URL);
+      })
+    );
+    return;
+  }
 
+  // Everything else (CSS/JS/images): cache-first
   event.respondWith(
-    caches.match(req).then((cached) => {
-      const fetchPromise = fetch(req)
-        .then((resp) => {
-          const copy = resp.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
-          return resp;
-        })
-        .catch(() => cached); // offline fallback
-
-      return cached || fetchPromise;
-    })
+    caches.match(req).then(cached => cached || fetch(req))
   );
 });
