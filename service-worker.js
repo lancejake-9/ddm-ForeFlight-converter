@@ -1,4 +1,4 @@
-i/* service-worker.js */
+/* service-worker.js */
 const CACHE_NAME = 'ddm-ff-v1';
 
 // List the files you want cached for offline.
