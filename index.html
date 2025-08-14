@@ -40,10 +40,10 @@
   <div class="wrap">
     <h1>Any → ForeFlight (DDM)
       <span class="chip">auto-detect</span>
-      <span class="badge">✔ offline ready · v1.9.0</span>
+      <span class="badge">✔ offline ready · v1.9.1</span>
     </h1>
     <div class="sub">
-      Paste any common format (DD, DDM, DMS) with N/S/E/W or ± signs. One pair per line. Output is ForeFlight‑ready DDM like
+      Paste any common format (DD, DDM, DMS) with N/S/E/W or ± signs. One pair per line. Output is ForeFlight-ready DDM like
       <span class="mono">46 37.230 N, 122 20.958 W</span>.
       <ul class="mono">
         <li>46.6205, -122.3493</li>
@@ -203,19 +203,19 @@
   });
   document.getElementById('btnTest').addEventListener('click', () => {
     inp.value = [
-      '46.6205, -122.3493',
-      'N46° 37.230', W122° 20.958',
-      '46 37 13.8 N, 122 20 57.5 W',
-      '46 37.230  -122 20.958',
-      'N46.6205  W122.3493'
-    ].join('\n');
+      "46.6205, -122.3493",
+      "N46° 37.230', W122° 20.958'",
+      "46 37 13.8 N, 122 20 57.5 W",
+      "46 37.230  -122 20.958",
+      "N46.6205  W122.3493"
+    ].join("\n");
   });
   document.getElementById('btnClear').addEventListener('click', () => { inp.value=''; setOutput({text:'',ok:0,skipped:0,notes:[]}); });
 
   // Auto register SW
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js?v=1.9.0').catch(console.error);
+      navigator.serviceWorker.register('sw.js?v=1.9.1').catch(console.error);
     });
   }
 })();
