@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Minimal Converter (DD only)</title>
+<style>
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial;margin:20px;line-height:1.35}
+  textarea{width:100%;min-height:120px;padding:12px;border:1px solid #e5e7eb;border-radius:10px;font-size:16px}
+  .btn{margin-top:10px;padding:12px 14px;border:1px solid #e5e7eb;border-radius:10px;background:#0b3d91;color:#fff;font-weight:700}
+  .out{margin-top:12px;padding:12px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;font-family:ui-monospace,Menlo,Consolas}
+  .hint{color:#666;font-size:13px;margin-top:6px}
+</style>
+</head>
+<body>
+<h1>Minimal Converter (DD → DDM)</h1>
+<p>Only accepts lines like: <code>47.6205, -122.3493</code> (decimal degrees, comma-separated).</p>
+<textarea id="in" placeholder="Paste: 47.6205, -122.3493"></textarea>
+<button id="go" class="btn" type="button">Convert</button>
+<div class="out" id="out">Output will appear here…</div>
+<div class="hint" id="hint"></div>
+
+<script>
+function toDDM(lat, lon){
+  function ddToDDM(dd, isLat){
+    const deg = Math.floor(Math.abs(dd));
+    const min = (Math.abs(dd) - deg) * 60;
+    const d = isLat ? String(deg).padStart(2,'0') : String(deg).padStart(3,'0');
+    return `${d}° ${min.toFixed(3)}'`;
+  }
+  const latH = lat >= 0 ? 'N' : 'S';
+  const lonH = lon >= 0 ? 'E' : 'W';
+  return `${ddToDDM(lat,true)} ${latH}  ${ddToDDM(lon,false)} ${lonH}`;
+}
+
+document.getElementById('go').addEventListener('click', () => {
+  const raw = (document.getElementById('in').value || '').trim();
+  if (!raw){ document.getElementById('out').textContent = 'Paste something first.'; return; }
+  const lines = raw.split(/\\n+/).map(s => s.trim()).filter(Boolean);
+  const outputs = [];
+  for (const line of lines){
+    // Strict: "<lat>, <lon>" both decimal, with optional leading +/-, decimals allowed
+    const m = line.match(/^\\s*([+-]?\\d+(?:\\.\\d+)?)\\s*,\\s*([+-]?\\d+(?:\\.\\d+)?)\\s*$/);
+    if (!m){ outputs.push(`⚠️ Not DD,DD: ${line}`); continue; }
+    const lat = parseFloat(m[1]);
+    const lon = parseFloat(m[2]);
+    if (!isFinite(lat) || !isFinite(lon)){ outputs.push(`⚠️ Invalid numbers: ${line}`); continue; }
+    if (Math.abs(lat) > 90 || Math.abs(lon) > 180){ outputs.push(`⚠️ Out of range: ${line}`); continue; }
+    outputs.push(toDDM(lat, lon));
+  }
+  document.getElementById('out').textContent = outputs.join('\\n');
+  document.getElementById('hint').textContent = `${outputs.length} line(s) processed`;
+});
+</script>
+</body>
+</html>
