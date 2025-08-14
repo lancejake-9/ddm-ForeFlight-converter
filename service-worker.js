@@ -1,31 +1,55 @@
-/* Simple offline-first cache */
-const VERSION = '1.9.1';
-const CACHE = 'ff-ddm-cache-' + VERSION;
-const CORE = [
-  './',
-  './index.html',
-  './offline.html',
-  './manifest.webmanifest',
-  './icons/apple-touch-icon-180.png'
+
+// service-worker.js
+const CACHE_NAME = "foreflight-converter-v1.9.4"; // bumped version to force update
+const FILES_TO_CACHE = [
+  "./",
+  "./index.html",
+  "./offline.html",
+  "./manifest.webmanifest",
+  "./style.css",
+  "./script.js"
 ];
 
-self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
-});
-
-self.addEventListener('activate', (e) => {
-  e.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())
+// Install the service worker
+self.addEventListener("install", (evt) => {
+  console.log("[ServiceWorker] Install");
+  evt.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      console.log("[ServiceWorker] Pre-caching offline page");
+      return cache.addAll(FILES_TO_CACHE);
+    })
   );
+  self.skipWaiting();
 });
 
-self.addEventListener('fetch', (e) => {
-  const req = e.request;
-  e.respondWith(
-    caches.match(req).then(cached => cached || fetch(req).then(res => {
-      const copy = res.clone();
-      caches.open(CACHE).then(c => c.put(req, copy)).catch(()=>{});
-      return res;
-    }).catch(() => caches.match('./offline.html')))
+// Activate the service worker
+self.addEventListener("activate", (evt) => {
+  console.log("[ServiceWorker] Activate");
+  evt.waitUntil(
+    caches.keys().then((keyList) => {
+      return Promise.all(
+        keyList.map((key) => {
+          if (key !== CACHE_NAME) {
+            console.log("[ServiceWorker] Removing old cache", key);
+            return caches.delete(key);
+          }
+        })
+      );
+    })
+  );
+  self.clients.claim();
+});
+
+// Fetch handler
+self.addEventListener("fetch", (evt) => {
+  if (evt.request.mode !== "navigate") {
+    return;
+  }
+  evt.respondWith(
+    fetch(evt.request).catch(() => {
+      return caches.open(CACHE_NAME).then((cache) => {
+        return cache.match("offline.html");
+      });
+    })
   );
 });

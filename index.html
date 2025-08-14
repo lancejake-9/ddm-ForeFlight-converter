@@ -1,175 +1,33 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Any → ForeFlight (DD)</title>
-  <meta name="theme-color" content="#ffffff">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png">
-  <style>
-    body{margin:0;background:#f8f9fa;color:#000;font:17px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
-    header{position:sticky;top:0;background:#fff;padding:14px 16px 8px;z-index:5;border-bottom:1px solid #ccc}
-    h1{font-size:20px;margin:0 0 6px}
-    .pills{display:flex;gap:8px;align-items:center;margin-bottom:6px}
-    .pill{font-size:12px;background:#e0e0e0;color:#000;border:1px solid #999;border-radius:999px;
-      padding:3px 9px;display:inline-flex;gap:6px;align-items:center;white-space:nowrap}
-    .pill.ok{background:#d4f8d4;color:#064d06;border-color:#0a6e0a}
-    main{padding:16px}
-    .card{background:#fff;border:1px solid #bbb;border-radius:8px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,0.1)}
-    textarea{width:100%;min-height:150px;background:#fff;color:#000;border:1px solid #888;
-      border-radius:6px;padding:12px;font:16px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-    .btns{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}
-    button{background:#1976d2;border:1px solid #115293;color:#fff;border-radius:6px;padding:10px 14px;font-weight:600;cursor:pointer}
-    button:hover{background:#1565c0}
-    button:active{transform:translateY(1px)}
-    .out{white-space:pre; font:16px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#f1f3f5;border:1px solid #888;border-radius:6px;padding:12px;min-height:110px;color:#000}
-    .muted{color:#555}
-    .row{display:grid;gap:12px}
-    @media(min-width:860px){.row{grid-template-columns:1fr 1fr}}
-    .footer{color:#555;font-size:13px;margin-top:12px}
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Any → ForeFlight (DD)</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b3d91">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png">
+<style>
+body { font-family: sans-serif; background: #0b0f1a; color: #fff; text-align: center; }
+textarea { width: 90%; height: 150px; background: #111; color: #fff; padding: 10px; border: none; border-radius: 5px; }
+button { margin: 5px; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
+</style>
 </head>
 <body>
-  <header>
-    <h1>Any → ForeFlight (DD)</h1>
-    <div class="pills">
-      <span class="pill">auto-detect</span>
-      <span id="offlinePill" class="pill ok">offline ready · v2.0</span>
-    </div>
-    <div class="muted">Paste any common format (DD, DDM, DMS) with N/S/E/W or ±. One pair per line. Output is ForeFlight-ready <b>decimal degrees</b> like <code>46.6205, -122.3493</code>.</div>
-  </header>
-
-  <main>
-    <div class="row">
-      <section class="card">
-        <textarea id="inp" placeholder="Paste coordinates here..."></textarea>
-        <div class="btns">
-          <button id="btnConvert" type="button">Convert</button>
-          <button id="btnCopy" type="button">Copy output</button>
-          <button id="btnClear" type="button">Clear</button>
-        </div>
-        <div id="out" class="out"></div>
-        <div id="summary" class="muted" style="margin-top:8px"></div>
-      </section>
-    </div>
-    <div class="card footer">
-      📲 Add to Home Screen (works offline)
-    </div>
-  </main>
-
+<h1>Any → ForeFlight (DD)</h1>
+<p>Paste any common format (DD, DDM, DMS) with N/S/E/W or ±. Output is decimal degrees.</p>
+<textarea id="input" placeholder="Paste coordinates here..."></textarea><br>
+<button onclick="convert()">Convert</button>
+<button onclick="copyOutput()">Copy output</button>
+<button onclick="clearInput()">Clear</button>
+<pre id="output"></pre>
+<script src="script.js"></script>
 <script>
-function normalizeSymbols(s){
-  if(!s) return "";
-  return s
-    .replace(/[−–—]/g, "-")
-    .replace(/[′’ʻ`´]/g, "'")
-    .replace(/[″”]/g, '"')
-    .replace(/[°º˚]/g, "°")
-    .replace(/\s+/g, " ")
-    .replace(/,\s*/g, ", ")
-    .trim();
-}
-function dmsToDD(d, m=0, s=0){
-  d = parseFloat(d||0); m = parseFloat(m||0); s = parseFloat(s||0);
-  const sign = d < 0 ? -1 : 1;
-  return sign * (Math.abs(d) + (Math.abs(m)/60) + (Math.abs(s)/3600));
-}
-function parseOne(coordStr){
-  const s = normalizeSymbols(coordStr).toUpperCase();
-  let hemi = null;
-  if(/[NSEW]/.test(s)) hemi = s.match(/[NSEW]/)[0];
-  const re = /(-?\d+(?:\.\d+)?)\s*(?:°)?\s*(?:(\d+(?:\.\d+)?)\s*(?:'|M)?\s*)?(?:(\d+(?:\.\d+)?)\s*(?:"|S)?\s*)?/;
-  const m = s.match(re);
-  if(!m) return null;
-  let [_, d, mi, se] = m;
-  let dd;
-  if(mi===undefined){
-    dd = parseFloat(d);
-  } else if(se===undefined){
-    dd = dmsToDD(d, mi, 0);
-  } else {
-    dd = dmsToDD(d, mi, se);
-  }
-  if(hemi === "S" || hemi === "W") dd = -Math.abs(dd);
-  return dd;
-}
-function parseLineToDD(line){
-  let s = normalizeSymbols(line).toUpperCase();
-  if(!s) return null;
-  const latDir = s.match(/[NS]/);
-  const lonDir = s.match(/[EW]/);
-  if(latDir && lonDir){
-    const latIdx = s.indexOf(latDir[0]);
-    const lonIdx = s.indexOf(lonDir[0]);
-    if(latIdx < lonIdx){
-      const latPart = s.slice(0, lonIdx).trim().replace(/[;,]/g," ");
-      const lonPart = s.slice(lonIdx).trim();
-      return [ parseOne(latPart), parseOne(lonPart) ];
-    } else {
-      const lonPart = s.slice(0, latIdx).trim().replace(/[;,]/g," ");
-      const latPart = s.slice(latIdx).trim();
-      return [ parseOne(latPart), parseOne(lonPart) ];
-    }
-  }
-  let parts = s.split(/[,;]/).map(t=>t.trim()).filter(Boolean);
-  if(parts.length === 2){
-    return [ parseOne(parts[0]), parseOne(parts[1]) ];
-  }
-  const nums = s.match(/-?\d+(?:\.\d+)?/g);
-  if(nums && (nums.length===2 || nums.length===4 || nums.length===6)){
-    const half = nums.length/2;
-    const latTokens = nums.slice(0, half).join(" ");
-    const lonTokens = nums.slice(half).join(" ");
-    return [ parseOne(latTokens), parseOne(lonTokens) ];
-  }
-  return null;
-}
-function fmtDD(lat, lon){
-  if(!isFinite(lat) || !isFinite(lon)) return null;
-  if(Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
-  return `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
-}
-const elIn = document.getElementById('inp');
-const elOut = document.getElementById('out');
-const elSummary = document.getElementById('summary');
-document.getElementById('btnConvert').addEventListener('click', () => {
-  const lines = elIn.value.split(/\n/);
-  let outLines = [];
-  let converted = 0, skipped = 0;
-  lines.forEach(line => {
-    const trimmed = line.trim();
-    if(!trimmed) return;
-    const pair = parseLineToDD(trimmed);
-    if(pair && isFinite(pair[0]) && isFinite(pair[1])){
-      const s = fmtDD(pair[0], pair[1]);
-      if(s){ outLines.push(s); converted++; } else { skipped++; }
-    } else skipped++;
-  });
-  elOut.textContent = outLines.join("\n");
-  elSummary.textContent = `${converted} converted, ${skipped} skipped — ${lines.filter(l=>l.trim()).length} line(s) processed.`;
-});
-document.getElementById('btnCopy').addEventListener('click', async () => {
-  const txt = elOut.textContent.trim();
-  if(!txt) return;
-  try{
-    await navigator.clipboard.writeText(txt);
-    alert('Output copied.');
-  }catch(e){
-    const ta = document.createElement('textarea');
-    ta.value = txt; document.body.appendChild(ta); ta.select();
-    document.execCommand('copy'); document.body.removeChild(ta);
-    alert('Output copied.');
-  }
-});
-document.getElementById('btnClear').addEventListener('click', () => {
-  elIn.value=''; elOut.textContent=''; elSummary.textContent='';
-});
-if('serviceWorker' in navigator){
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js").then(() => {
+    console.log("Service Worker Registered");
   });
 }
 </script>
