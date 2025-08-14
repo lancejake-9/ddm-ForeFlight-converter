@@ -1,47 +1,22 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Offline - ForeFlight Coordinate Converter</title>
-<style>
-  body {
-    background: #f7f9fc;
-    font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-    color: #1b2638;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    text-align: center;
-    padding: 20px;
-  }
-  h1 {
-    color: #0b3d91;
-    margin-bottom: 12px;
-  }
-  p {
-    max-width: 400px;
-    margin: 0 auto 20px;
-    color: #6b7a90;
-    font-size: 16px;
-  }
-  .btn {
-    display: inline-block;
-    background: #0b3d91;
-    color: #fff;
-    padding: 10px 18px;
-    border-radius: 8px;
-    text-decoration: none;
-    font-weight: 600;
-  }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Offline – DDM → ForeFlight</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;margin:0;display:grid;min-height:100dvh;place-items:center;background:#f6f7fb}
+    main{max-width:540px;padding:24px;text-align:center}
+    h1{font-size:20px;margin:0 0 8px}
+    p{color:#555;margin:0 0 16px}
+    button{font:inherit;padding:10px 14px;border:1px solid #ccc;border-radius:10px;background:#fff}
+  </style>
 </head>
 <body>
-  <h1>You're Offline</h1>
-  <p>The ForeFlight Coordinate Converter isn’t available because you’re offline and this page wasn’t cached yet.</p>
-  <a class="btn" href="./">Try Again</a>
+  <main>
+    <h1>You’re offline</h1>
+    <p>You can still open the converter from your Home Screen. When you’re back online, reload to get the latest version.</p>
+    <button onclick="location.reload()">Try again</button>
+  </main>
 </body>
 </html>

@@ -1,80 +1,60 @@
-// service-worker.js (enhanced auto-update + old cache cleanup)
-const CACHE_NAME = "foreflight-cache";
-const OFFLINE_URL = "offline.html";
-
-const FILES_TO_CACHE = [
-  "./",
-  "./index.html",
-  "./offline.html",
-  "./manifest.webmanifest",
-  "./icons/apple-touch-icon-180.png"
+/* v3 – unified offline for PWA + Safari tabs (ROOT SITE VERSION) */
+const CACHE = 'ff-converter-v3';
+const CORE_ASSETS = [
+  '/',
+  '/index.html',
+  '/offline.html',
+  '/manifest.webmanifest',
+  '/icons/apple-touch-icon-180.png',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  // add your main JS/CSS here:
+  '/main.js',
+  '/styles.css'
 ];
 
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(async (cache) => {
-      await cache.addAll(FILES_TO_CACHE.map((u) => new Request(u, { cache: "reload" })));
-    })
-  );
+self.addEventListener('install', (event) => {
+  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE_ASSETS)));
   self.skipWaiting();
 });
 
-self.addEventListener("activate", (event) => {
-  // Remove any old caches from previous implementations
+self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.map((k) => (k === CACHE_NAME ? null : caches.delete(k))))
-    )
+    caches.keys().then((keys) => Promise.all(keys.map(k => k === CACHE ? null : caches.delete(k))))
   );
   self.clients.claim();
 });
 
-async function cachePut(request, response) {
+async function cacheFirst(request) {
+  const cache = await caches.open(CACHE);
+  const cached = await cache.match(request, { ignoreVary: true });
+  if (cached) return cached;
   try {
-    const cache = await caches.open(CACHE_NAME);
-    await cache.put(request, response.clone());
-  } catch {}
+    const res = await fetch(request);
+    if (res && res.ok && new URL(request.url).origin === location.origin) {
+      cache.put(request, res.clone());
+    }
+    return res;
+  } catch {
+    return cached;
+  }
 }
 
-self.addEventListener("fetch", (event) => {
+self.addEventListener('fetch', (event) => {
   const req = event.request;
-  if (req.method !== "GET") return;
-
-  if (req.mode === "navigate") {
+  if (req.mode === 'navigate') {
     event.respondWith((async () => {
       try {
-        const networkResp = await fetch(req);
-        event.waitUntil(cachePut(req, networkResp.clone()));
-        return networkResp;
+        return await fetch(req);
       } catch {
-        const cache = await caches.open(CACHE_NAME);
-        const cached = await cache.match(req);
-        return cached || cache.match(OFFLINE_URL);
+        const cache = await caches.open(CACHE);
+        const cachedPage = await cache.match(req, { ignoreVary: true });
+        return cachedPage || (await cache.match('/offline.html'));
       }
     })());
     return;
   }
-
-  event.respondWith((async () => {
-    const cache = await caches.open(CACHE_NAME);
-    const cached = await cache.match(req);
-    const fetchPromise = fetch(req).then((resp) => {
-      event.waitUntil(cachePut(req, resp.clone()));
-      return resp;
-    }).catch(() => null);
-    return cached || fetchPromise || fetch(req);
-  })());
-});
-
-// Receive commands from the page
-self.addEventListener("message", (event) => {
-  const { type } = event.data || {};
-  if (type === "SKIP_WAITING") self.skipWaiting();
-  if (type === "RESET_CACHES") {
-    event.waitUntil(
-      caches.keys().then((keys) =>
-        Promise.all(keys.map((k) => caches.delete(k)))
-      )
-    );
+  if (req.method === 'GET') {
+    event.respondWith(cacheFirst(req));
   }
 });
