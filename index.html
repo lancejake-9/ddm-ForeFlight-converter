@@ -1,187 +1,178 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DDM → ForeFlight Converter</title>
-<link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#0b3d91">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png">
-<style>
-  body {
-    font-family: sans-serif;
-    margin: 20px;
-    background: #f9f9f9;
-  }
-  h1 { font-size: 1.4em; }
-  input, button {
-    font-size: 1.1em;
-    padding: 8px;
-    margin: 6px 0;
-    width: 100%;
-    box-sizing: border-box;
-  }
-  button {
-    background: #0b3d91;
-    color: white;
-    border: none;
-    cursor: pointer;
-  }
-  pre {
-    background: #fff;
-    padding: 10px;
-    border: 1px solid #ccc;
-    font-size: 1.2em;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-  }
-</style>
+  <meta charset="utf-8" />
+  <title>ForeFlight Coordinate Converter — Paste Any Format</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- PWA hooks (safe to keep even if you haven't added icons/manifest yet) -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0b3d91">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png">
+
+  <style>
+    :root { --bg:#0b3d91; --fg:#fff; --card:#f7f9fc; --ink:#0a2540; --muted:#5b7083; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+      color: var(--ink); background: #eef3fb;
+      display: grid; min-height: 100vh; place-items: start center; padding: 24px;
+    }
+    .wrap {
+      width: min(900px, 100%); background: var(--card); border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.08); overflow: hidden;
+    }
+    header {
+      background: linear-gradient(135deg, var(--bg), #1d66c3);
+      color: var(--fg); padding: 22px 20px;
+    }
+    header h1 { margin: 0 0 6px; font-size: 20px; font-weight: 700; }
+    header p  { margin: 0; opacity: .95; font-size: 14px; line-height: 1.3; }
+    main { padding: 18px; }
+    label { font-size: 13px; color: var(--muted); display:block; margin: 10px 0 6px; }
+    textarea, input[type="text"] {
+      width: 100%; padding: 12px 12px; border-radius: 10px; border: 1px solid #d7e1ef;
+      font: 14px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      background: #fff; color: #12243a; resize: vertical; min-height: 90px;
+    }
+    textarea[readonly] { background: #f3f6fb; }
+    .row { display: grid; gap: 10px; grid-template-columns: 1fr; }
+    .btns { display:flex; gap:10px; flex-wrap: wrap; margin-top: 10px; }
+    button {
+      cursor:pointer; border: 1px solid #c9d7ee; background:#fff; color:#0a2540;
+      padding: 10px 14px; border-radius: 10px; font-weight: 600; font-size: 14px;
+    }
+    button.primary { background: #0b3d91; color:#fff; border-color: #0b3d91; }
+    .hint {
+      font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.4;
+      background:#eef3fb; padding:10px; border-radius:10px; border:1px dashed #cdd9ee;
+    }
+    .examples { margin-top: 6px; font-size:12px; color: var(--muted); }
+    footer { padding: 12px 18px 18px; font-size: 12px; color: var(--muted); }
+    .ok { color: #0a7c3a; font-weight:600; }
+    .err { color: #9b1c1c; font-weight:600; }
+  </style>
 </head>
 <body>
+  <div class="wrap">
+    <header>
+      <h1>ForeFlight Coordinate Converter</h1>
+      <p>Copy & paste <strong>any coordinate format</strong> (DD, DDM, DMS — straight or curly quotes, N/S/E/W anywhere),
+         and we’ll convert it to ForeFlight-ready <code>lat, lon</code>.</p>
+    </header>
 
-<h1>DDM → ForeFlight Converter</h1>
+    <main>
+      <div class="row">
+        <label for="input">Paste coordinates (one pair):</label>
+        <textarea id="input" placeholder="Examples:
+43°0′6″ N , 122°22′24″ W
+N43 00.100  W122 22.40
+43.001667, -122.373333
+43°00.100' N 122°22.40' W"></textarea>
 
-<!-- Option A: Two separate inputs -->
-<input id="lat" placeholder="Latitude (any format)">
-<input id="lon" placeholder="Longitude (any format)">
+        <div class="btns">
+          <button class="primary" id="convertBtn">Convert to ForeFlight</button>
+          <button id="clearBtn">Clear</button>
+          <button id="copyBtn">Copy Output</button>
+        </div>
 
-<!-- OR Option B: Single combined input -->
-<input id="combined" placeholder="Paste both lat/lon (any format)">
+        <label for="output">Output (ForeFlight-ready <code>lat, lon</code>):</label>
+        <textarea id="output" readonly></textarea>
 
-<button onclick="handleConvertClick()">Convert</button>
+        <div id="status" class="hint"></div>
 
-<pre id="output"></pre>
+        <div class="examples">
+          Accepted inputs include:
+          <code>43°0′6″ N , 122°22′24″ W</code> •
+          <code>N43 0 6 W122 22 24</code> •
+          <code>43°00.100′ N 122°22.40′ W</code> •
+          <code>43.001667, -122.373333</code>
+        </div>
+      </div>
+    </main>
 
-<script>
-// === Any format in -> ForeFlight DDM out ===
-// Accepts DMS / DDM / Decimal Degrees. Robust to symbols, spacing, and hemisphere position.
+    <footer>
+      Tip: If no hemisphere letters are given, the first number is treated as <em>latitude</em> and the second as <em>longitude</em>. If the magnitudes look swapped (e.g., |lat| > 90), we auto-correct.
+    </footer>
+  </div>
 
-const BASE_LAT_MAX = 90;
-const BASE_LON_MAX = 180;
-
-function normalize(str) {
-  return (str || '')
-    .trim()
-    .replace(/[“”]/g, '"')
-    .replace(/[′’]/g, "'")
-    .replace(/[º˚ﹾ]/g, '°')
-    .replace(/\s+/g, ' ')
-    .toUpperCase();
-}
-
-function splitLatLon(raw) {
-  const s = normalize(raw);
-  const sepMatch = s.split(/[,;/]|(?:\s{2,})/).map(t => t.trim()).filter(Boolean);
-  if (sepMatch.length >= 2) return [sepMatch[0], sepMatch[1]];
-  const tokens = s.split(/\s/);
-  const idxN = tokens.findIndex(t => /[NS]/.test(t));
-  const idxE = tokens.findIndex(t => /[EW]/.test(t));
-  if (idxN !== -1 && idxE !== -1) {
-    const i1 = Math.min(idxN, idxE);
-    const i2 = Math.max(idxN, idxE);
-    return [tokens.slice(0, i2 + 1).join(' '), tokens.slice(i2 + 1).join(' ')];
-  }
-  return [s, null];
-}
-
-function parseAnyCoord(input, isLat = null) {
-  const s = normalize(input);
-  if (!s) throw new Error('Empty coordinate');
-  let hemi = (s.match(/[NSEW]/) || [null])[0];
-  let sign = 1;
-  if (!hemi && /^\s*-/.test(s)) sign = -1;
-  const nums = (s.match(/-?\d+(?:\.\d+)?/g) || []).map(parseFloat);
-  const hasDegSym = /°/.test(s);
-  if (nums.length >= 3) {
-    const [degRaw, minRaw, secRaw] = nums;
-    const deg = Math.abs(degRaw);
-    const minutes = Math.abs(minRaw) + Math.abs(secRaw) / 60;
-    return { deg, minutes, hemi, sign: hemi ? signFromHemi(hemi, isLat) : (degRaw < 0 ? -1 : sign) };
-  } else if (nums.length === 2) {
-    const [degRaw, minRaw] = nums;
-    const deg = Math.abs(degRaw);
-    const minutes = Math.abs(minRaw);
-    return { deg, minutes, hemi, sign: hemi ? signFromHemi(hemi, isLat) : (degRaw < 0 ? -1 : sign) };
-  } else if (nums.length === 1) {
-    const dec = nums[0];
-    const { deg, minutes } = decDegToDDM(Math.abs(dec));
-    return { deg, minutes, hemi, sign: hemi ? signFromHemi(hemi, isLat) : (dec < 0 ? -1 : 1) };
-  }
-  throw new Error('Unable to parse coordinate: ' + input);
-}
-
-function signFromHemi(hemi, isLat) {
-  if (hemi === 'N') return 1;
-  if (hemi === 'S') return -1;
-  if (hemi === 'E') return 1;
-  if (hemi === 'W') return -1;
-  return isLat ? 1 : 1;
-}
-
-function decDegToDDM(dec) {
-  const deg = Math.floor(dec);
-  const minutes = (dec - deg) * 60;
-  return { deg, minutes };
-}
-
-function formatDDM({ deg, minutes, hemi, sign }, isLat) {
-  if (!hemi) hemi = isLat ? (sign < 0 ? 'S' : 'N') : (sign < 0 ? 'W' : 'E');
-  deg = Math.abs(deg);
-  minutes = Math.abs(minutes);
-  if (minutes >= 59.9995) { deg += 1; minutes = 0; }
-  const degWidth = isLat ? 2 : 3;
-  const degStr = String(deg).padStart(degWidth, '0');
-  const minStr = minutes.toFixed(3).padStart(6, '0');
-  return `${degStr}° ${minStr}' ${hemi}`;
-}
-
-function inferAxis(parsedLat, parsedLon) {
-  let lat = parsedLat, lon = parsedLon;
-  if (lat && lon) {
-    const latLooksLikeLat = (lat.hemi ? /[NS]/.test(lat.hemi) : lat.deg <= BASE_LAT_MAX);
-    const lonLooksLikeLon = (lon.hemi ? /[EW]/.test(lon.hemi) : lon.deg <= BASE_LON_MAX && lon.deg > BASE_LAT_MAX);
-    if (!latLooksLikeLat && lonLooksLikeLon) [lat, lon] = [lon, lat];
-  }
-  return { lat, lon };
-}
-
-function convertToForeFlightDDM(latStr, lonStr) {
-  if (!latStr) throw new Error('Latitude missing');
-  if (!lonStr) throw new Error('Longitude missing');
-  let lat = parseAnyCoord(latStr, true);
-  let lon = parseAnyCoord(lonStr, false);
-  ({ lat, lon } = inferAxis(lat, lon));
-  if (lat.deg > BASE_LAT_MAX) throw new Error('Latitude degrees out of range');
-  if (lon.deg > BASE_LON_MAX) throw new Error('Longitude degrees out of range');
-  return `${formatDDM(lat, true)}, ${formatDDM(lon, false)}`;
-}
-
-function convertCombinedInput(raw) {
-  const [latStr, lonStr] = splitLatLon(raw);
-  if (!lonStr) throw new Error('Could not detect both Lat and Lon; add a comma or space between them.');
-  return convertToForeFlightDDM(latStr, lonStr);
-}
-
-function handleConvertClick() {
-  const latEl = document.querySelector('#lat');
-  const lonEl = document.querySelector('#lon');
-  const combinedEl = document.querySelector('#combined');
-  const out = document.querySelector('#output');
-  try {
-    let result;
-    if (combinedEl && combinedEl.value.trim()) {
-      result = convertCombinedInput(combinedEl.value);
-    } else {
-      result = convertToForeFlightDDM(latEl.value, lonEl.value);
+  <script>
+  function parseAnyCoordsToDecimal(input) {
+    let s = (input || "").trim()
+      .replace(/[，、]/g, ",")
+      .replace(/[‐–—]/g, "-")
+      .replace(/[º°]/g, "°")
+      .replace(/[’'′]/g, "'")
+      .replace(/[”"″]/g, '"')
+      .replace(/\s+/g, " ")
+      .replace(/\s*,\s*/g, ",");
+    s = s.replace(/([NSns])\s+(?=[\-\d])/g, "$1, ");
+    s = s.replace(/([EWew])\s+(?=[\-\d])/g, "$1, ");
+    const dmsRe = /([NSWE])?\s*([+-]?\d{1,3})(?:\s*°)?\s*(\d{1,2}(?:\.\d+)?)?(?:\s*')?\s*(\d{1,2}(?:\.\d+)?)?(?:\s*")?\s*([NSWE])?/gi;
+    let m, parts = [];
+    while ((m = dmsRe.exec(s)) && parts.length < 2) {
+      const hemiA = (m[1] || "").toUpperCase();
+      const hemiB = (m[5] || "").toUpperCase();
+      const hemi  = hemiA || hemiB;
+      const deg = parseFloat(m[2]);
+      const min = m[3] ? parseFloat(m[3]) : 0;
+      const sec = m[4] ? parseFloat(m[4]) : 0;
+      const minutes = min + (sec ? sec / 60 : 0);
+      let val = Math.abs(deg) + (minutes ? minutes / 60 : 0);
+      if ((hemi === "S" || hemi === "W") || deg < 0) val = -val;
+      parts.push({ value: val, hemi });
     }
-    out.textContent = result;
-  } catch (e) {
-    out.textContent = e.message;
+    if (parts.length < 2) {
+      const simple = s.split(",").map(x => x.trim());
+      if (simple.length === 2 && !isNaN(parseFloat(simple[0])) && !isNaN(parseFloat(simple[1]))) {
+        return { lat: parseFloat(simple[0]), lon: parseFloat(simple[1]) };
+      }
+      throw new Error("Could not parse coordinates.");
+    }
+    let latPart = parts.find(p => p.hemi === "N" || p.hemi === "S") || parts[0];
+    let lonPart = parts.find(p => p.hemi === "E" || p.hemi === "W") || (parts[1] || parts[0] === latPart ? parts[1] : parts[0]);
+    if (Math.abs(latPart.value) > 90 && Math.abs(lonPart.value) <= 90) {
+      const t = latPart; latPart = lonPart; lonPart = t;
+    }
+    return {
+      lat: Number(latPart.value.toFixed(6)),
+      lon: Number(lonPart.value.toFixed(6)),
+    };
   }
-}
-</script>
-
+  function convertToForeFlight() {
+    const inpEl = document.getElementById("input");
+    const outEl = document.getElementById("output");
+    const statusEl = document.getElementById("status");
+    const text = (inpEl?.value || "").trim();
+    try {
+      const { lat, lon } = parseAnyCoordsToDecimal(text);
+      outEl.value = `${lat}, ${lon}`;
+      statusEl.innerHTML = `<span class="ok">Success:</span> Converted to ForeFlight format (lat, lon).`;
+    } catch (e) {
+      outEl.value = "";
+      statusEl.innerHTML = `<span class="err">Error:</span> ${e.message} Try examples above (DD, DDM, or DMS).`;
+    }
+  }
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("convertBtn").addEventListener("click", convertToForeFlight);
+    document.getElementById("clearBtn").addEventListener("click", () => {
+      document.getElementById("input").value = "";
+      document.getElementById("output").value = "";
+      document.getElementById("status").textContent = "";
+      document.getElementById("input").focus();
+    });
+    document.getElementById("copyBtn").addEventListener("click", async () => {
+      const out = document.getElementById("output").value.trim();
+      if (!out) return;
+      try {
+        await navigator.clipboard.writeText(out);
+        document.getElementById("status").innerHTML = `<span class="ok">Copied:</span> ${out}`;
+      } catch {
+        document.getElementById("status").innerHTML = `<span class="ok">Output ready to copy:</span> ${out}`;
+      }
+    });
+  });
+  </script>
 </body>
 </html>
