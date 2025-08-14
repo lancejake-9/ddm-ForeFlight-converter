@@ -1,103 +1,20 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ForeFlight Coordinate Converter</title>
-  <link rel="manifest" href="manifest.webmanifest" />
-  <meta name="theme-color" content="#0b3d91" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png" />
-  <style>
-    :root { --blue:#0b3d91; --bg:#f7f9fc; --card:#ffffff; --text:#1b2638; --muted:#6b7a90; --btn:#0b3d91; --btnText:#fff; --ring:rgba(11,61,145,.18); --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; }
-    *{box-sizing:border-box} html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial}
-    header{background:var(--blue);color:#fff;padding:22px 20px 18px}
-    header h1{margin:0 0 6px;font-size:24px}
-    header p{margin:0;opacity:.9}
-    main{max-width:720px;margin:16px auto 40px;padding:0 16px}
-    .card{background:var(--card);border-radius:14px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
-    label{display:block;margin:10px 0 6px;color:var(--muted);font-weight:600}
-    textarea{width:100%;padding:12px;border-radius:12px;border:1px solid #d7dfeb;background:#fff;font-family:var(--mono);font-size:16px;min-height:110px;resize:vertical}
-    textarea:focus{box-shadow:0 0 0 6px var(--ring);border-color:#98b6ff;outline:none}
-    .row{display:flex;gap:12px;margin:14px 0;flex-wrap:wrap}
-    button{border:0;padding:12px 16px;border-radius:12px;cursor:pointer;font-weight:700}
-    .primary{background:var(--btn);color:var(--btnText)}
-    .ghost{background:#eef2fb;color:var(--blue)}
-    .mono{font-family:var(--mono);white-space:pre-wrap}
-    .muted{color:var(--muted)}
-    .pill{display:inline-block;margin-top:12px;border-radius:12px;padding:10px 12px;background:#edf7ee;color:#106d3a;font-weight:600}
-    .small{font-size:13px}
-    .output{min-height:90px}
-    .topbar{display:flex;justify-content:space-between;align-items:center}
-    .reset{background:transparent;border:0;color:#fff;opacity:.8;font-size:14px;text-decoration:underline;cursor:pointer}
-  </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DDM → ForeFlight Converter</title>
 </head>
 <body>
-  <header>
-    <div class="topbar">
-      <h1>ForeFlight Coordinate Converter</h1>
-      <button class="reset" onclick="window.resetOfflineCache && window.resetOfflineCache()">Reset Offline Cache</button>
-    </div>
-    <p>Copy &amp; paste <strong>any coordinate format</strong> (DD, DDM, DMS — N/S/E/W anywhere; straight or curly quotes).
-      We’ll output ForeFlight-ready <code>lat, lon</code>.</p>
-  </header>
-  <main>
-    <div class="card">
-      <label for="in">Paste coordinates (one pair):</label>
-      <textarea id="in" placeholder="Examples:
-43 00.100 122 22.40
-43°00.100′ N 122°22.40′ W
-N43 0 6   W122 22 24
-43.001667, -122.373333"></textarea>
-      <div class="row">
-        <button class="primary" id="convert">Convert to ForeFlight</button>
-        <button class="ghost" id="clear">Clear</button>
-        <button class="ghost" id="copy">Copy Output</button>
-      </div>
-      <label for="out">Output (ForeFlight-ready <code>lat, lon</code>):</label>
-      <textarea id="out" class="mono output" readonly></textarea>
-      <div id="copyNote" class="pill small" style="display:none;">Copied</div>
-      <p class="muted small" style="margin-top:16px;">
-        Works with: <span class="mono">43°0′6″ N, 122°22′24″ W · N43 0 6 W122 22 24 · 43°00.100′ N 122°22.40′ W ·
-43.001667, −122.373333 · 43 00.100 122 22.40</span>
-      </p>
-    </div>
-  </main>
+  <h1>DDM → ForeFlight Converter</h1>
+  <p>Your converter app content goes here.</p>
 
+  <!-- Service Worker Registration -->
   <script>
-    document.getElementById('convert').addEventListener('click', () => {
-      const coords = document.getElementById('in').value.trim();
-      let output = '';
-      const ddmBarePair = /^\s*(\d{1,2})\s+(\d{1,2}(?:\.\d+)?)\s+(\d{1,3})\s+(\d{1,2}(?:\.\d+)?)\s*$/;
-      let match;
-      function toDD(deg, min, sec){ deg=Number(deg||0); min=Number(min||0); sec=Number(sec||0); return Math.abs(deg)+(min/60)+(sec/3600); }
-      function applyHemisphere(val, hemi){ if(!hemi) return val; hemi=hemi.toUpperCase(); if(hemi==='S'||hemi==='W') return -Math.abs(val); return Math.abs(val); }
-      function norm(s){ return s.replace(/[“”]/g,'"').replace(/[‘’]/g,"'").replace(/[−–—]/g,'-').replace(/°/g,' ').replace(/[′’']/g,' ').replace(/[″"]/g,' ').replace(/[;,|]/g,' , ').replace(/\s+/g,' ').trim(); }
-      function parse(inp){
-        const raw=inp.trim(); if(!raw) return null; const s=norm(raw);
-        let m = s.match(/^\s*([+-]?\d+(?:\.\d+)?)\s*[, ]\s*([+-]?\d+(?:\.\d+)?)\s*$/);
-        if(m){ let lat=parseFloat(m[1]), lon=parseFloat(m[2]); if(Math.abs(lat)>90||Math.abs(lon)>180)[lat,lon]=[lon,lat]; return [lat,lon]; }
-        m = s.match(ddmBarePair);
-        if(m){ let lat=toDD(m[1],m[2],0); let lon=toDD(m[3],m[4],0); if(lon>30) lon=-lon; return [lat,lon]; }
-        m = s.match(/^\s*([NS])\s*(\d{1,2})\s+(\d{1,2}(?:\.\d+)?)?(?:\s+(\d{1,2}(?:\.\d+)?))?\s+([EW])\s*(\d{1,3})\s+(\d{1,2}(?:\.\d+)?)?(?:\s+(\d{1,2}(?:\.\d+)?))?\s*$/i);
-        if(m){ let lat=toDD(m[2],m[3],m[4]); let lon=toDD(m[6],m[7],m[8]); lat=applyHemisphere(lat,m[1]); lon=applyHemisphere(lon,m[5]); return [lat,lon]; }
-        m = s.match(/^\s*(\d{1,2})\s+(\d{1,2}(?:\.\d+)?)?(?:\s+(\d{1,2}(?:\.\d+)?))?\s*([NS])\s+(\d{1,3})\s+(\d{1,2}(?:\.\d+)?)?(?:\s+(\d{1,2}(?:\.\d+)?))?\s*([EW])\s*$/i);
-        if(m){ let lat=toDD(m[1],m[2],m[3]); let lon=toDD(m[5],m[6],m[7]); lat=applyHemisphere(lat,m[4]); lon=applyHemisphere(lon,m[8]); return [lat,lon]; }
-        m = s.match(/^\s*(\d{1,2})\s+(\d{1,2}(?:\.\d+)?)\s*([NS])?\s*[,\s]+\s*(\d{1,3})\s+(\d{1,2}(?:\.\d+)?)\s*([EW])?\s*$/i);
-        if(m){ let lat=toDD(m[1],m[2],0), lon=toDD(m[4],m[5],0); if(m[3]) lat=applyHemisphere(lat,m[3]); if(m[6]) lon=applyHemisphere(lon,m[6]); if(!m[6]&&!/[NSEW]/i.test(raw)&&lon>30) lon=-lon; return [lat,lon]; }
-        return null;
-      }
-      const res = parse(coords);
-      if(!res){ document.getElementById('out').value=''; alert('Sorry — could not parse that. Try a different format or add N/S/E/W.'); return; }
-      const [lat,lon] = res;
-      document.getElementById('out').value = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
-    });
-    document.getElementById('clear').addEventListener('click',()=>{document.getElementById('in').value='';document.getElementById('out').value='';});
-    document.getElementById('copy').addEventListener('click',()=>{const out=document.getElementById('out');out.select();document.execCommand('copy');const n=document.getElementById('copyNote');n.style.display='inline-block';setTimeout(()=>n.style.display='none',1200);});
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./service-worker.js')
+      .catch(console.error);
+  }
   </script>
-
-  <!-- Service worker auto-updater -->
-  <script src="sw-register.js"></script>
 </body>
 </html>
