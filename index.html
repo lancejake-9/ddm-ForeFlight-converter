@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Latlonger — Any → ForeFlight (DD)</title>
+<title>Latlonger™ — Any → ForeFlight (DD)</title>
 <meta name="theme-color" content="#ffffff">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -101,7 +101,7 @@
   .pill{
     display:inline-block;
     background:#eef3ff;
-    color:var(--accent-2);
+    color:#1251c4;
     border:1px solid #dbe8ff;
     border-radius:999px;
     padding:3px 10px;
@@ -156,9 +156,9 @@
 </style>
 
   <!-- Branding additions -->
-  <meta property="og:title" content="Latlonger — Any → ForeFlight (DD)">
+  <meta property="og:title" content="Latlonger™ — Any → ForeFlight (DD)">
   <meta property="og:description" content="Paste or drop any lat/lon format (DD, DDM, DMS). Get ForeFlight-ready decimal degrees. Works offline when added to Home Screen.">
-  <meta name="apple-mobile-web-app-title" content="Latlonger">
+  <meta name="apple-mobile-web-app-title" content="Latlonger™">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%230b3d91'/%3E%3Cpath d='M32 10a22 22 0 100 44 22 22 0 000-44zm0 4a18 18 0 110 36 18 18 0 010-36z' fill='white'/%3E%3Cpath d='M32 14v36M14 32h36' stroke='white' stroke-width='3'/%3E%3C/svg%3E">
 
 </head>
@@ -172,7 +172,7 @@
           <path d="M32 10a22 22 0 100 44 22 22 0 000-44zm0 4a18 18 0 110 36 18 18 0 010-36z" fill="#fff"/>
           <path d="M32 14v36M14 32h36" stroke="#fff" stroke-width="3"/>
         </svg>
-        Latlonger
+        Latlonger<span aria-hidden="true">™</span><span class="sr-only">™</span>
       </a>
       <div class="brand-tag">Any → ForeFlight (DD)</div>
     </div>
@@ -241,7 +241,7 @@ function parseOne(coord){
   const letterless = coord.replace(/[NSEW]/gi,'').trim();
 
   // DMS e.g. 37° 20' 19.0"
-  let m = letterless.match(/(-?\d+(?:\.\d+)?)\s*[^0-9.\-+]+?\s*(\d+(?:\.\d+)?)\s*['’m]?\s*(\d+(?:\.\d+)?)?\s*["”s]?/i);
+  let m = letterless.match(/(-?\d+(?:\.\d+)?)\s*[^0-9.\-+]+?\s*(\d+(?:\.\d+)?)\s*['’m]?\s*(\d+(?:\.\d+)?)?\s*[\"”s]?/i);
   if(m){
     let d = parseFloat(m[1]), mi = parseFloat(m[2]||0), se = parseFloat(m[3]||0);
     return sign * toDecimal(Math.abs(d), mi, se);
@@ -300,7 +300,7 @@ function parsePair(raw){
   }
 
   // Strategy 3: fallback — extract two highest-confidence matches using regex windows
-  const guess = s.match(/(-?\d+(?:\.\d+)?(?:\s*[°d]\s*\d+(?:\.\d+)?(?:\s*['’m]\s*\d+(?:\.\d+)?)?["”s]?)?\s*[NSEW]?)/gi);
+  const guess = s.match(/(-?\d+(?:\.\d+)?(?:\s*[°d]\s*\d+(?:\.\d+)?(?:\s*['’m]\s*\d+(?:\.\d+)?)?[\"”s]?)?\s*[NSEW]?)/gi);
   if(guess && guess.length >= 2){
     return [parseOne(guess[0]), parseOne(guess[1])];
   }
@@ -345,6 +345,13 @@ document.getElementById('copy').addEventListener('click', async ()=>{
 document.getElementById('clear').addEventListener('click', ()=>{
   input.value = "";
   output.textContent = "";
+});
+
+// Pressing Enter inside the textarea triggers Convert (quality-of-life; safe change)
+document.getElementById('input').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter' && (e.metaKey || e.ctrlKey)){
+    document.getElementById('convert').click();
+  }
 });
 
 // Drag & drop zone
