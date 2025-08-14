@@ -1,208 +1,280 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DDM → ForeFlight (Decimal Minutes) Converter</title>
-
-  <!-- PWA-friendly (keeps existing files working if present) -->
-  <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#0b3d91">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png">
-
+  <title>Any → ForeFlight (DDM)</title>
+  <meta name="description" content="Paste almost any coordinate format (DD, DDM, DMS) and get ForeFlight-ready DDM." />
   <style>
-    :root { --bg:#ffffff; --text:#111; --muted:#666; --accent:#0b3d91; --border:#e5e7eb; --card:#fafafa; }
-    html, body {height:100%}
-    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial;background:var(--bg);color:var(--text);line-height:1.35}
-    header{padding:28px 16px 8px}
-    h1{margin:0 0 6px;font-size:28px;font-weight:800;letter-spacing:.2px}
-    .sub{color:var(--muted);font-size:14px}
-    .container{padding:8px 16px 32px;max-width:820px;margin:0 auto}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px}
-    textarea,input[type="text"]{width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid var(--border);font-size:16px;background:#fff}
-    textarea{min-height:140px;resize:vertical}
-    .row{display:flex;gap:10px;flex-wrap:wrap}
-    .row>*{flex:1}
-    .btn{appearance:none;border:1px solid var(--border);border-radius:10px;background:#fff;padding:12px 14px;font-size:16px;font-weight:600;cursor:pointer}
-    .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-    .out{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;background:#fff;border-radius:10px;border:1px solid var(--border);padding:12px;font-size:16px;min-height:48px;display:flex;align-items:center;justify-content:space-between;gap:8px;white-space:pre-wrap}
-    .pill{display:inline-block;background:#eef2ff;color:#1e3a8a;border:1px solid #c7d2fe;border-radius:999px;padding:2px 8px;font-size:12px;margin-left:6px}
-    .hint{color:var(--muted);font-size:13px}
-    .examples{margin-top:10px}
-    .examples code{background:#11111108;padding:3px 6px;border-radius:6px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}
-    .footer{color:var(--muted);font-size:12px;margin-top:24px}
+    :root { --brand:#0b3d91; --bg:#f6f8fb; --ink:#0b1220; --muted:#5b6573; --card:#fff; --ring:rgba(11,61,145,.2); }
+    html,body{height:100%}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+    .wrap{max-width:880px;margin:0 auto;padding:24px 16px 56px}
+    h1{font-size:clamp(22px,4vw,34px);margin:.2em 0 .4em}
+    p.hint{color:var(--muted);margin:.2em 0 1em}
+    textarea{width:100%;min-height:200px;padding:14px 16px;border:1px solid #d7dce3;border-radius:12px;background:var(--card);font:16px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;box-sizing:border-box}
+    .row{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+    button{background:var(--brand);color:#fff;border:0;border-radius:12px;padding:12px 16px;font-weight:600;font-size:16px}
+    button.secondary{background:#e8ecf5;color:#0b3d91}
+    button:active{transform:translateY(1px)}
+    .out{margin-top:16px;padding:14px 16px;border:1px solid #d7dce3;border-radius:12px;background:#fff;font:15px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap}
+    .muted{color:var(--muted);margin-top:8px}
+    .small{font-size:13px;color:var(--muted)}
+    .badge{display:inline-block;font-size:12px;font-weight:700;background:#eef3ff;color:var(--brand);padding:2px 8px;border-radius:9999px;margin-left:6px}
+    .ok{border-left:6px solid #26a269}
+    .warn{border-left:6px solid #e6a700}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
   </style>
 </head>
 <body>
-  <header>
-    <h1>DDM → ForeFlight Converter <span class="pill">offline-ready</span></h1>
-    <div class="sub">Paste <strong>any common coordinate format</strong> (DD, DDM, DMS) and get a
-      <strong>ForeFlight-ready</strong> Degrees &amp; Decimal Minutes string.</div>
-  </header>
+  <div class="wrap">
+    <h1>Any → ForeFlight (DDM) <span class="badge">auto‑detect</span></h1>
+    <p class="hint">Accepts most common formats (DD, DDM, DMS) with <span class="mono">N/S/E/W</span> or signs. One pair per line. Example inputs:</p>
+    <ul class="small">
+      <li class="mono">46.6205, -122.3493</li>
+      <li class="mono">N46° 37.230', W122° 20.958'</li>
+      <li class="mono">46 37 13.8 N, 122 20 57.5 W</li>
+      <li class="mono">46 37.230 -122 20.958</li>
+      <li class="mono">N46.6205 W122.3493</li>
+    </ul>
 
-  <div class="container">
-    <div class="card">
-      <label for="in" class="hint">Input (any format). One point per line or separated by commas.</label>
-      <textarea id="in" placeholder="Examples:
-47.6205, -122.3493
-47° 37.230' N, 122° 20.958' W
-N47° 37' 13.8&quot;  W122° 20' 57.5&quot;
-43° 00.100' N 122° 22.40' W"></textarea>
+    <textarea id="inp" placeholder="Paste coordinates here..."></textarea>
 
-      <div class="row" style="margin-top:10px">
-        <button id="convert" class="btn primary" type="button">Convert</button>
-        <button id="clear" class="btn" type="button">Clear</button>
-        <button id="copy" class="btn" type="button">Copy Output</button>
-      </div>
-
-      <div style="margin-top:12px">
-        <div class="hint">Output (ForeFlight DDM):</div>
-        <div class="out"><span id="out"></span><span id="status" class="hint"></span></div>
-      </div>
-
-      <div class="examples hint">
-        <div><strong>Tips:</strong> Works with “N/S/E/W”, signs (+/-), symbols (° ' "), or plain numbers.</div>
-        <div>Format used: <code>DD° MM.mmm' N/S  DDD° MM.mmm' E/W</code></div>
-      </div>
+    <div class="row">
+      <button id="convert" type="button">Convert</button>
+      <button id="copy" type="button" class="secondary">Copy output</button>
+      <button id="test" type="button" class="secondary">Paste test set</button>
+      <button id="clear" type="button" class="secondary">Clear</button>
     </div>
 
-    <div class="footer">
-      If you saved this to your Home Screen, it will work without internet after the first open.
-    </div>
+    <div id="out" class="out" aria-live="polite"></div>
+    <div class="small muted" id="foot"></div>
   </div>
 
-  <!-- Script placed at the very end so elements exist before we bind events -->
-  <script>
-    // --- Service worker registration ---
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+<script>
+(function(){
+  // ---------- helpers ----------
+  function normalize(s){
+    if (!s) return "";
+    return s
+      // normalize unicode minus variants to hyphen
+      .replace(/[\\u2212\\u2012\\u2013\\u2014\\u2015\\uFE63\\uFF0D]/g,"-")
+      // normalize degree/minute/second glyphs
+      .replace(/[dD][eE][gG]/g, "°")
+      .replace(/[º]/g, "°")
+      .replace(/[′’`]/g, "'")
+      .replace(/[“”]/g, '"')
+      // commas/semicolons/pipe -> comma
+      .replace(/[;|]/g, ",")
+      // collapse whitespace
+      .replace(/\\s+/g, " ")
+      .trim();
+  }
+
+  function extractNumbers(s){
+    const m = s.match(/[+-]?\\d+(?:\\.\\d+)?/g);
+    return m ? m.map(Number) : [];
+  }
+
+  function hasLatHemi(s){ return /[NS]/i.test(s); }
+  function hasLonHemi(s){ return /[EW]/i.test(s); }
+  function hemiSign(s){
+    const m = s.match(/[NSEW]/i);
+    if (!m) return null;
+    const h = m[0].toUpperCase();
+    if (h==="S" || h==="W") return -1;
+    return 1;
+  }
+
+  function toDecimalFromParts(parts){
+    const [deg, min, sec] = parts;
+    let d = Math.abs(deg);
+    if (typeof min === "number") d += Math.abs(min)/60;
+    if (typeof sec === "number") d += Math.abs(sec)/3600;
+    return d;
+  }
+
+  function parseSingleCoord(chunk, expectLat){
+    const raw = chunk;
+    const s = normalize(chunk).toUpperCase();
+    if (!s) return { ok:false, err:"empty", raw };
+
+    const nums = extractNumbers(s);
+    if (nums.length === 0) return { ok:false, err:"no numbers", raw };
+
+    // Determine sign from hemisphere or explicit minus on first number
+    let sign = 1;
+    const hsign = hemiSign(s);
+    if (hsign) sign = hsign;
+    if (/^-/.test(s.trim())) sign = -1; // leading negative
+
+    let value;
+    if (nums.length >= 3){
+      // DMS
+      const [deg, min, sec] = nums;
+      if (min >= 60 || sec >= 60) return { ok:false, err:"minutes/seconds out of range", raw };
+      value = toDecimalFromParts([deg, min, sec]);
+    } else if (nums.length === 2){
+      // DDM
+      const [deg, min] = nums;
+      if (min >= 60) return { ok:false, err:"minutes out of range", raw };
+      value = toDecimalFromParts([deg, min]);
+    } else {
+      // DD
+      const [deg] = nums;
+      value = Math.abs(deg);
+      // If the sign is from DD itself (e.g., -122.3), honor it:
+      if (deg < 0) sign = -1;
+    }
+    value = sign * value;
+
+    // Range check
+    const lim = expectLat ? 90 : 180;
+    if (Math.abs(value) > lim + 1e-9){
+      return { ok:false, err:"degrees out of range", raw };
+    }
+    return { ok:true, val:value, raw, type: (nums.length>=3?"DMS":(nums.length===2?"DDM":"DD")), sign };
+  }
+
+  function splitIntoPair(line){
+    const s = normalize(line);
+    if (!s) return null;
+
+    // 1) comma preferred
+    const parts = s.split(",");
+    if (parts.length >= 2){
+      const a = parts[0].trim();
+      const b = parts.slice(1).join(",").trim(); // in case seconds contained commas earlier
+      if (a && b) return [a,b];
     }
 
-    // Utilities
-    function $(id){ return document.getElementById(id); }
-    function status(msg){ $('status').textContent = msg || ''; }
+    // 2) both hemispheres present
+    // try "NS ...  EW ..." or "EW ...  NS ..."
+    let m = s.match(/^(.*?[NS][^NSEW]*?)\\s+(.*?[EW][^NSEW]*?)$/i);
+    if (m) return [m[1].trim(), m[2].trim()];
+    m = s.match(/^(.*?[EW][^NSEW]*?)\\s+(.*?[NS][^NSEW]*?)$/i);
+    if (m) return [m[2].trim(), m[1].trim()]; // reorder: lat first
 
-    // Bind events after DOM is fully parsed (extra safety even though script is at end)
-    document.addEventListener('DOMContentLoaded', () => {
-      const inEl = $('in');
-      const outEl = $('out');
+    // 3) fallback: split by two large numeric clusters
+    const clusters = s.match(/([NSEW]?\\s*[+-]?\\d[^,]*?(?:\"|\\'|°)?)(?:\\s+|$)/ig);
+    if (clusters && clusters.length >= 2){
+      return [clusters[0].trim(), clusters[1].trim()];
+    }
 
-      $('convert').addEventListener('click', () => {
-        try {
-          const raw = (inEl.value || '').trim();
-          if (!raw) { outEl.textContent = ''; status(''); return; }
-          const res = convertMulti(raw);
-          outEl.textContent = res.text;
-          status(res.note);
-        } catch (e) {
-          status('Error converting.'); 
-          console.error(e);
-        }
-      });
+    return null;
+  }
 
-      $('clear').addEventListener('click', () => {
-        inEl.value = '';
-        outEl.textContent = '';
-        status('Cleared.');
-      });
+  function formatDDM(decDeg, isLat){
+    const hemi = decDeg >= 0 ? (isLat ? "N" : "E") : (isLat ? "S" : "W");
+    const abs = Math.abs(decDeg);
+    let deg = Math.floor(abs);
+    let minutes = (abs - deg) * 60;
 
-      $('copy').addEventListener('click', async () => {
-        const text = (outEl.textContent || '').trim();
-        if (!text) return status('Nothing to copy.');
-        try {
-          await navigator.clipboard.writeText(text);
-          status('Copied.');
-        } catch {
-          status('Copy failed.');
-        }
-      });
-    });
+    // Round to 3 decimals and handle 59.999 -> 60.000 rollover
+    minutes = Math.round(minutes * 1000) / 1000;
+    if (minutes >= 60){
+      deg += 1;
+      minutes = 0;
+    }
 
-    // ---------- Conversion logic (simplified & safe) ----------
-    function convertMulti(raw){
-      // Split by newlines; also accept commas separating lat/lon on each line
-      const lines = raw.split(/\\n+/).map(s => s.trim()).filter(Boolean);
-      const outputs = [];
-      for (const line of lines) {
-        const pair = splitLatLon(line);
-        if (!pair) { outputs.push('⚠️ Could not detect lat/lon in: ' + line); continue; }
+    const degWidth = isLat ? 2 : 3;
+    const dStr = String(deg).padStart(degWidth, "0");
+    const mStr = minutes.toFixed(3).padStart(6, "0"); // ensures 0 leading if < 10
+    return `${hemi}${dStr}° ${mStr}'`;
+  }
 
-        const lat = parseAny(pair.lat);
-        const lon = parseAny(pair.lon);
-        if (lat == null || lon == null || !isFinite(lat) || !isFinite(lon)) {
-          outputs.push('⚠️ Could not parse: ' + line);
-          continue;
-        }
-        outputs.push(toDDM(lat, lon));
+  function convertAll(text){
+    const lines = text.split(/\\r?\\n/);
+    const out = [];
+    let total = 0, ok = 0, bad = 0;
+
+    for (const raw of lines){
+      const line = raw.trim();
+      if (!line) continue;
+      total++;
+
+      const pair = splitIntoPair(line);
+      if (!pair){
+        out.push(`⚠️ Couldn't find a lat,lon pair:  ${raw}`);
+        bad++; continue;
       }
-      return { text: outputs.join('\\n'), note: outputs.length > 1 ? (outputs.length + ' lines converted') : 'Ready' };
-    }
 
-    // Try to split "lat, lon" from a line
-    function splitLatLon(line){
-      // 1) Common case: explicit comma separating two chunks
-      const comma = line.split(/,(?![^()]*\\))/).map(s => s.trim()).filter(Boolean);
-      if (comma.length === 2) return { lat: comma[0], lon: comma[1] };
+      // Guess ordering: lat first, unless hemispheres make it obvious
+      let [latChunk, lonChunk] = pair;
 
-      // 2) If both cardinals present, pull by N/S and E/W areas
-      const latCard = line.match(/([NS]\\s*[^NSEW,]+\\d[^NSEW,]*\\s*[NS]?)/i);
-      const lonCard = line.match(/([EW]\\s*[^NSEW,]+\\d[^NSEW,]*\\s*[EW]?)/i);
-      if (latCard && lonCard) return { lat: latCard[1], lon: lonCard[1] };
-
-      // 3) Fallback: find two coordinate-looking groups (numbers with optional ° ' ")
-      const groups = line.match(/([+\\-NSWE\\s]*\\d+(?:[\\.,]\\d+)?(?:[^\\d\\w]+\\d+(?:[\\.,]\\d+)?(?:[^\\d\\w]+\\d+(?:[\\.,]\\d+)?)?)?\\s*[NSWE]?)/gi);
-      if (groups && groups.length >= 2) return { lat: groups[0], lon: groups[1] };
-
-      return null;
-    }
-
-    // Parse a single coord string to decimal degrees
-    function parseAny(str){
-      let s = String(str).trim().toUpperCase();
-      let hemi = null;
-      const hemiMatch = s.match(/[NSEW]/g);
-      if (hemiMatch) hemi = hemiMatch[hemiMatch.length - 1]; // last letter wins
-      s = s.replace(/[NSEW]/g, ' ');
-
-      // Normalize separators and signs
-      s = s.replace(/[°º]/g, ' ').replace(/[′’']/g, ' ').replace(/[″”"]/g, ' ');
-      s = s.replace(/,/g, '.').replace(/\\s+/g, ' ').trim();
-
-      // Extract up to 3 numeric parts
-      const parts = s.split(' ').filter(Boolean).map(Number).filter(v => !Number.isNaN(v));
-
-      let dd = null;
-      if (parts.length === 1) { // DD
-        dd = parts[0];
-      } else if (parts.length === 2) { // DDM
-        dd = parts[0] + parts[1] / 60;
-      } else if (parts.length >= 3) { // DMS
-        dd = parts[0] + parts[1] / 60 + parts[2] / 3600;
-      } else {
-        return null;
+      // If first chunk looks like E/W and second N/S, swap
+      if (/[EW]/i.test(latChunk) && /[NS]/i.test(lonChunk)){
+        [latChunk, lonChunk] = [lonChunk, latChunk];
       }
 
-      if (hemi === 'S' || hemi === 'W') dd = -Math.abs(dd);
-      return dd;
+      const plat = parseSingleCoord(latChunk, true);
+      const plon = parseSingleCoord(lonChunk, false);
+
+      if (!plat.ok || !plon.ok){
+        const why = !plat.ok ? `lat: ${plat.err}` : `lon: ${plon.err}`;
+        out.push(`⚠️ Parse error (${why}):  ${raw}`);
+        bad++; continue;
+      }
+
+      // final format (ForeFlight DDM)
+      const latDDM = formatDDM(plat.val, true);
+      const lonDDM = formatDDM(plon.val, false);
+      out.push(`${latDDM} ${lonDDM}`);
+      ok++;
     }
 
-    // Convert decimal degrees to DDM string (ForeFlight style)
-    function toDDM(lat, lon){
-      const latDDM = ddToDDM(Math.abs(lat), true);
-      const lonDDM = ddToDDM(Math.abs(lon), false);
-      const latH = lat >= 0 ? 'N' : 'S';
-      const lonH = lon >= 0 ? 'E' : 'W';
-      return `${latDDM} ${latH}  ${lonDDM} ${lonH}`;
-    }
+    return { text: out.join("\\n"), stats: { total, ok, bad } };
+  }
 
-    function ddToDDM(dd, isLat){
-      const deg = Math.floor(dd);
-      const min = (dd - deg) * 60;
-      const d = isLat ? String(deg).padStart(2, '0') : String(deg).padStart(3, '0');
-      return `${d}° ${min.toFixed(3)}'`;
+  // ---------- UI ----------
+  const $ = (id)=>document.getElementById(id);
+  const inp = $("inp");
+  const out = $("out");
+  const foot = $("foot");
+
+  function run(){
+    const res = convertAll(inp.value);
+    out.className = "out" + (res.stats.bad ? " warn" : " ok");
+    out.textContent = res.text || "No lines to process.";
+    foot.textContent = `${res.stats.ok} converted, ${res.stats.bad} skipped — ${res.stats.total} line(s) processed.`;
+  }
+
+  $("convert").addEventListener("click", run);
+  $("clear").addEventListener("click", ()=>{ inp.value=""; out.textContent=""; foot.textContent=""; });
+  $("copy").addEventListener("click", async ()=>{
+    try {
+      await navigator.clipboard.writeText(out.textContent);
+      $("copy").textContent = "Copied!";
+      setTimeout(()=> $("copy").textContent = "Copy output", 1000);
+    } catch(e){
+      alert("Copy failed. Select and copy manually.");
     }
-  </script>
+  });
+  $("test").addEventListener("click", ()=>{
+    const tests = [
+      "46.6205, -122.3493",
+      "N46° 37.230', W122° 20.958'",
+      "46 37 13.8 N, 122 20 57.5 W",
+      "46 37.230, -122 20.958",
+      "N46.6205 W122.3493",
+      "S34 03.500, E018 27.250",
+      "34°03'30\"N 118°14'37.2\"W",
+      "47.6205 -122.3493",
+      "N47 37.230 W122 20.958",
+      "47° 37.230' N 122° 20.958' W"
+    ].join("\\n");
+    inp.value = tests;
+  });
+
+  // Autofill example on load (keeps it blank if input already has text)
+  if (!inp.value) inp.value = "46.6205, -122.3493\\nN46° 37.230', W122° 20.958'";
+
+  // Allow pressing Enter+Cmd/Ctrl to convert
+  inp.addEventListener("keydown", (e)=>{
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { run(); }
+  });
+})();
+</script>
+
 </body>
 </html>
