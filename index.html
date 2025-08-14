@@ -4,11 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ForeFlight Coordinate Converter</title>
+
+  <!-- PWA-friendly (safe if you already have them) -->
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#0b3d91" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png" />
+
   <style>
     :root {
       --blue:#0b3d91; --bg:#f7f9fc; --card:#ffffff; --text:#1b2638; --muted:#6b7a90;
@@ -16,11 +19,11 @@
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
     * { box-sizing: border-box; }
-    html,body { margin:0; height:100%; background:var(--bg); color:var(--text); font:16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji"; }
+    html,body { margin:0; height:100%; background:var(--bg); color:var(--text); font:16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans"; }
     header { background: var(--blue); color:#fff; padding: 22px 20px 18px; }
     header h1 { margin: 0 0 6px; font-size: 24px; }
     header p { margin: 0; opacity:.9 }
-    main { max-width: 720px; margin: 16px auto 40px; padding: 0 16px; }
+    main { max-width: 760px; margin: 16px auto 40px; padding: 0 16px; }
     .card { background:var(--card); border-radius:14px; padding:16px; box-shadow: 0 2px 10px rgba(0,0,0,.06); }
     label { display:block; margin: 10px 0 6px; color:var(--muted); font-weight:600; }
     textarea { width: 100%; padding: 12px; border-radius:12px; border:1px solid #d7dfeb; background: #fff;
@@ -40,9 +43,10 @@
 <body>
   <header>
     <h1>ForeFlight Coordinate Converter</h1>
-    <p>Copy &amp; paste <strong>any coordinate format</strong> (DD, DDM, DMS — straight or curly quotes, N/S/E/W anywhere),
-      and we’ll convert it to ForeFlight-ready <code>lat, lon</code>.</p>
+    <p>Paste <strong>any coordinate format</strong> (DD, DDM, DMS — N/S/E/W before or after; straight or curly quotes).<br>
+    We’ll output ForeFlight-ready <code>lat, lon</code>.</p>
   </header>
+
   <main>
     <div class="card">
       <label for="in">Paste coordinates (one pair):</label>
@@ -51,54 +55,162 @@
 43°00.100′ N 122°22.40′ W
 N43 0 6   W122 22 24
 43.001667, -122.373333"></textarea>
+
       <div class="row">
         <button class="primary" id="convert">Convert to ForeFlight</button>
         <button class="ghost" id="clear">Clear</button>
-      </div>
-      <div class="row">
         <button class="ghost" id="copy">Copy Output</button>
       </div>
+
       <label for="out">Output (ForeFlight-ready <code>lat, lon</code>):</label>
       <textarea id="out" class="mono output" readonly></textarea>
       <div id="copyNote" class="pill small" style="display:none;">Copied</div>
+
       <p class="muted small" style="margin-top:16px;">
-        Accepted inputs include: <span class="mono">43°0′6″ N , 122°22′24″ W · N43 0 6 W122 22 24 · 43°00.100′ N 122°22.40′ W ·
-43.001667, −122.373333</span>
+        Works with: <span class="mono">43°0′6″ N, 122°22′24″ W · N43 0 6 W122 22 24 · 43°00.100′ N 122°22.40′ W ·
+43.001667, −122.373333 · 43 00.100 122 22.40</span>
       </p>
-      <p class="muted small">Tip: If no hemisphere letters are given, the first number is latitude and the second is longitude.
-      If magnitudes look swapped (e.g., |lat| > 90), we auto-correct.</p>
     </div>
   </main>
-  <script>
-    document.getElementById('convert').addEventListener('click', () => {
-      const coords = document.getElementById('in').value.trim();
-      let output = '';
-      // Bare DDM with possible 3-digit longitude degrees
-      const ddmBarePair = /^\s*(\d{1,2})\s+(\d{1,2}(?:\.\d+)?)\s+(\d{1,3})\s+(\d{1,2}(?:\.\d+)?)\s*$/;
-      let match;
-      if ((match = coords.match(ddmBarePair))) {
-        let latDeg = parseFloat(match[1]);
-        let latMin = parseFloat(match[2]);
-        let lonDeg = parseFloat(match[3]);
-        let lonMin = parseFloat(match[4]);
-        let lat = latDeg + latMin / 60;
-        let lon = lonDeg + lonMin / 60;
-        if (!/[NSEW]/i.test(coords) && lon > 0 && lon > 30) lon = -lon;
-        output = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
-      }
-      document.getElementById('out').value = output;
-    });
-    document.getElementById('clear').addEventListener('click', () => {
-      document.getElementById('in').value = '';
-      document.getElementById('out').value = '';
-    });
-    document.getElementById('copy').addEventListener('click', () => {
-      const out = document.getElementById('out');
-      out.select();
-      document.execCommand('copy');
-      document.getElementById('copyNote').style.display = 'inline-block';
-      setTimeout(() => document.getElementById('copyNote').style.display = 'none', 1500);
-    });
-  </script>
+
+<script>
+(function(){
+  const $in = document.getElementById('in');
+  const $out = document.getElementById('out');
+
+  function norm(s){
+    // Normalize Unicode quotes/degree marks and separators
+    return s
+      .replace(/[“”]/g, '"')
+      .replace(/[‘’]/g, "'")
+      .replace(/[−–—]/g, "-")
+      .replace(/°/g, " ")
+      .replace(/[′’']/g, " ")
+      .replace(/[″"]/g, " ")
+      .replace(/[;,|]/g, " , ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function clampLat(x){ return Math.max(-90, Math.min(90, x)); }
+  function clampLon(x){ return Math.max(-180, Math.min(180, x)); }
+
+  function toDD(deg, min, sec){
+    deg = Number(deg||0); min = Number(min||0); sec = Number(sec||0);
+    return Math.abs(deg) + (min/60) + (sec/3600);
+  }
+
+  function applyHemisphere(val, hemi, isLat){
+    if(!hemi) return val;
+    hemi = hemi.toUpperCase();
+    if(hemi === 'S') return -Math.abs(val);
+    if(hemi === 'W') return -Math.abs(val);
+    if(hemi === 'N' || hemi === 'E') return Math.abs(val);
+    return val;
+  }
+
+  function swapIfLooksFlipped(lat, lon){
+    if (Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+      return [lon, lat];
+    }
+    // If both look plausible but one > 90 (only lon can), swap when needed
+    if (Math.abs(lat) > 90 && Math.abs(lon) <= 90) {
+      return [lon, lat];
+    }
+    return [lat, lon];
+  }
+
+  function parse(coords){
+    const raw = coords.trim();
+    if(!raw) return null;
+    const s = norm(raw);
+
+    // 1) Decimal degrees, comma or space separated
+    let m = s.match(/^\s*([+-]?\d+(?:\.\d+)?)\s*[, ]\s*([+-]?\d+(?:\.\d+)?)\s*$/);
+    if(m){
+      let lat = parseFloat(m[1]), lon = parseFloat(m[2]);
+      [lat, lon] = swapIfLooksFlipped(lat, lon);
+      return [clampLat(lat), clampLon(lon)];
+    }
+
+    // 2) Bare DDM: "43 00.100 122 22.40"
+    m = s.match(/^\s*(\d{1,2})\s+(\d{1,2}(?:\.\d+)?)\s+(\d{1,3})\s+(\d{1,2}(?:\.\d+)?)\s*$/);
+    if(m){
+      let lat = toDD(m[1], m[2], 0);
+      let lon = toDD(m[3], m[4], 0);
+      // Heuristic: if no hemisphere and lon > 30, assume West for NA use
+      if (lon > 30) lon = -lon;
+      return [lat, lon];
+    }
+
+    // 3) DDM/DMS with hemisphere BEFORE each coord: "N43 0 6 W122 22 24"
+    m = s.match(/^\s*([NS])\s*(\d{1,2})\s+(\d{1,2}(?:\.\d+)?)?(?:\s+(\d{1,2}(?:\.\d+)?))?\s+([EW])\s*(\d{1,3})\s+(\d{1,2}(?:\.\d+)?)?(?:\s+(\d{1,2}(?:\.\d+)?))?\s*$/i);
+    if(m){
+      let hLat=m[1], dLat=m[2], mLat=m[3], sLat=m[4];
+      let hLon=m[5], dLon=m[6], mLon=m[7], sLon=m[8];
+      let lat = toDD(dLat, mLat, sLat);
+      let lon = toDD(dLon, mLon, sLon);
+      lat = applyHemisphere(lat, hLat, true);
+      lon = applyHemisphere(lon, hLon, false);
+      return [lat, lon];
+    }
+
+    // 4) DDM/DMS with hemisphere AFTER each coord: "43 0 6 N 122 22 24 W" or "43 00.100 N 122 22.40 W"
+    m = s.match(/^\s*(\d{1,2})\s+(\d{1,2}(?:\.\d+)?)?(?:\s+(\d{1,2}(?:\.\d+)?))?\s*([NS])\s+(\d{1,3})\s+(\d{1,2}(?:\.\d+)?)?(?:\s+(\d{1,2}(?:\.\d+)?))?\s*([EW])\s*$/i);
+    if(m){
+      let dLat=m[1], mLat=m[2], sLat=m[3], hLat=m[4];
+      let dLon=m[5], mLon=m[6], sLon=m[7], hLon=m[8];
+      let lat = toDD(dLat, mLat, sLat);
+      let lon = toDD(dLon, mLon, sLon);
+      lat = applyHemisphere(lat, hLat, true);
+      lon = applyHemisphere(lon, hLon, false);
+      return [lat, lon];
+    }
+
+    // 5) DDM with symbols and mixed positions like: "43°00.100′ N 122°22.40′ W"
+    // After normalization, symbols are spaces, so #4 should already catch, but keep a more tolerant fallback:
+    m = s.match(/^\s*(\d{1,2})\s+(\d{1,2}(?:\.\d+)?)\s*([NS])?\s*[,\s]+\s*(\d{1,3})\s+(\d{1,2}(?:\.\d+)?)\s*([EW])?\s*$/i);
+    if(m){
+      let dLat=m[1], mLat=m[2], hLat=m[3];
+      let dLon=m[4], mLon=m[5], hLon=m[6];
+      let lat = toDD(dLat, mLat, 0);
+      let lon = toDD(dLon, mLon, 0);
+      if(hLat) lat = applyHemisphere(lat, hLat, true);
+      if(hLon) lon = applyHemisphere(lon, hLon, false);
+      // If still no hemispheres, apply NA heuristic on lon
+      if(!hLon && !/[NSEW]/i.test(raw) && lon > 30) lon = -lon;
+      return [lat, lon];
+    }
+
+    return null;
+  }
+
+  function format(lat, lon){
+    return `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+  }
+
+  function convert(){
+    const txt = $in.value;
+    const res = parse(txt);
+    if(!res){
+      $out.value = '';
+      alert('Sorry — could not parse that. Try a different format or add N/S/E/W.');
+      return;
+    }
+    let [lat, lon] = res;
+    $out.value = format(lat, lon);
+  }
+
+  document.getElementById('convert').addEventListener('click', convert);
+  document.getElementById('clear').addEventListener('click', () => { $in.value=''; $out.value=''; });
+  document.getElementById('copy').addEventListener('click', () => {
+    $out.select();
+    document.execCommand('copy');
+    const n = document.getElementById('copyNote');
+    n.style.display = 'inline-block';
+    setTimeout(()=> n.style.display='none', 1200);
+  });
+})();
+</script>
 </body>
 </html>
