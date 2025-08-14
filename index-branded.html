@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Latlonger — Any → ForeFlight (DD)</title>
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>
+  :root{
+    --bg:#f7f9fc;
+    --panel:#ffffff;
+    --text:#0b1a33;
+    --muted:#4b5b7a;
+    --accent:#0b3d91;
+    --accent-2:#1251c4;
+    --border:#e4e9f2;
+    --success:#0a7f2e;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Helvetica,Arial,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    -webkit-font-smoothing:antialiased;
+    line-height:1.45;
+  }
+  .wrap{
+    max-width:900px;
+    margin:0 auto;
+    padding:32px 16px 80px;
+  }
+  header h1{
+    margin:0 0 4px;
+    font-size:clamp(28px,5vw,44px);
+    letter-spacing:.3px;
+  }
+  header p{
+    margin:8px 0 16px;
+    color:var(--muted);
+    font-size:clamp(14px,2.8vw,17px);
+  }
+  .card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:16px;
+    box-shadow:0 2px 6px rgba(0,0,0,.04);
+  }
+  textarea#input{
+    width:100%;
+    min-height:180px;
+    border:1px solid var(--border);
+    background:#fff;
+    border-radius:10px;
+    padding:14px 12px;
+    font-size:16px;
+    color:var(--text);
+    outline:none;
+  }
+  .actions{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-top:14px;
+  }
+  button{
+    appearance:none;
+    border:1px solid var(--border);
+    background:#fff;
+    border-radius:10px;
+    padding:10px 16px;
+    font-size:16px;
+    cursor:pointer;
+    transition:transform .02s ease, border-color .2s ease, background .2s ease;
+  }
+  button.primary{
+    background:var(--accent);
+    color:#fff;
+    border-color:var(--accent);
+  }
+  button:active{ transform:scale(.98); }
+  .output{
+    margin-top:16px;
+    padding:12px 14px;
+    background:#f1f6ff;
+    border:1px solid #dbe8ff;
+    border-radius:10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    white-space:pre-wrap;
+    word-break:break-word;
+  }
+  .tips{
+    margin-top:22px;
+    color:var(--muted);
+    font-size:15px;
+  }
+  .pill{
+    display:inline-block;
+    background:#eef3ff;
+    color:var(--accent-2);
+    border:1px solid #dbe8ff;
+    border-radius:999px;
+    padding:3px 10px;
+    margin-right:8px;
+    font-size:13px;
+  }
+  .drop{
+    margin-top:12px;
+    border:2px dashed #c9d6f2;
+    border-radius:12px;
+    padding:14px;
+    background:#fbfdff;
+    color:var(--muted);
+    text-align:center;
+    font-size:14px;
+  }
+  .ok{ color:var(--success); font-weight:600; }
+  .footer{
+    margin-top:26px;
+    font-size:13px;
+    color:var(--muted);
+  }
+
+  /* brand bar */
+  .brandbar{
+    width:100%;
+    background:#0b3d91;
+    color:#fff;
+    margin:0 0 12px;
+    border-bottom:1px solid #0a3480;
+  }
+  .brandbar .inner{
+    max-width:900px;
+    margin:0 auto;
+    padding:10px 16px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .brand-logo{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    text-decoration:none;
+    color:#fff;
+    font-weight:700;
+    letter-spacing:.3px;
+  }
+  .brand-logo svg{ width:22px; height:22px; }
+  .brand-tag{ opacity:.9; font-size:13px; margin-left:auto; }
+
+</style>
+
+  <!-- Branding additions -->
+  <meta property="og:title" content="Latlonger — Any → ForeFlight (DD)">
+  <meta property="og:description" content="Paste or drop any lat/lon format (DD, DDM, DMS). Get ForeFlight-ready decimal degrees. Works offline when added to Home Screen.">
+  <meta name="apple-mobile-web-app-title" content="Latlonger">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%230b3d91'/%3E%3Cpath d='M32 10a22 22 0 100 44 22 22 0 000-44zm0 4a18 18 0 110 36 18 18 0 010-36z' fill='white'/%3E%3Cpath d='M32 14v36M14 32h36' stroke='white' stroke-width='3'/%3E%3C/svg%3E">
+
+</head>
+<body>
+
+  <div class="brandbar" role="banner">
+    <div class="inner">
+      <a class="brand-logo" href="https://latlonger.com" target="_blank" rel="noopener">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true">
+          <circle cx="32" cy="32" r="30" fill="#ffffff22"/>
+          <path d="M32 10a22 22 0 100 44 22 22 0 000-44zm0 4a18 18 0 110 36 18 18 0 010-36z" fill="#fff"/>
+          <path d="M32 14v36M14 32h36" stroke="#fff" stroke-width="3"/>
+        </svg>
+        Latlonger
+      </a>
+      <div class="brand-tag">Any → ForeFlight (DD)</div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <header>
+      <h1><span class="pill">Any</span> → <strong>ForeFlight (DD)</strong></h1>
+      <p>Paste any common format (<strong>DD</strong>, <strong>DDM</strong>, <strong>DMS</strong>) with N/S/E/W or ±. Output is <strong>decimal degrees</strong>.</p>
+    </header>
+
+    <div class="card">
+      <textarea id="input" placeholder="e.g. 37° 20' 19.0&quot; N, 121° 53' 10.7&quot; W"></textarea>
+
+      <div class="drop" id="drop">Drag &amp; drop a .txt file here, or drop any text.</div>
+
+      <div class="actions">
+        <button id="convert" class="primary">Convert</button>
+        <button id="copy">Copy output</button>
+        <button id="clear">Clear</button>
+      </div>
+
+      <div id="output" class="output" aria-live="polite"></div>
+
+      <div class="tips">
+        <div><strong>Tips</strong></div>
+        <ul>
+          <li>Accepts: <em>37.3375, -121.8861</em> • <em>37° 20.250' N, 121° 53.166' W</em> • <em>37° 20' 15&quot; N 121° 53' 10&quot; W</em></li>
+          <li>Order can be <em>lat, lon</em> or <em>lon, lat</em> if marked with NSEW.</li>
+          <li>Add this to your Home Screen for offline use — it's <span class="ok">offline-ready</span>.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer">Made for quick cockpit paste → convert → copy to ForeFlight.</div>
+  </div>
+
+<script>
+/* ---------- Utilities ---------- */
+function toDecimal(deg, min, sec){
+  deg = Number(deg||0); min = Number(min||0); sec = Number(sec||0);
+  return deg + (min/60) + (sec/3600);
+}
+function cleanup(s){
+  return s
+    .replace(/[“”]/g,'"')
+    .replace(/[‘’]/g,"'")
+    .replace(/°|deg/gi,'°')
+    .replace(/’/g,"'")
+    .replace(/″/g,'"')
+    .replace(/—|–/g,'-')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+
+/* Parse one coordinate (lat or lon) from tokens like 37° 20' 19.0" N or 121 53.178 W or -121.8861 */
+function parseOne(coord){
+  coord = coord.trim();
+
+  // determine hemisphere sign
+  let sign = 1;
+  if(/[SW]/i.test(coord)) sign = -1;
+  if(/^-/.test(coord)) sign = -1;
+
+  // remove letters and plus/minus for number parsing later (keep separators)
+  const letterless = coord.replace(/[NSEW]/gi,'').trim();
+
+  // DMS e.g. 37° 20' 19.0"
+  let m = letterless.match(/(-?\d+(?:\.\d+)?)\s*[^0-9.\-+]+?\s*(\d+(?:\.\d+)?)\s*['’m]?\s*(\d+(?:\.\d+)?)?\s*["”s]?/i);
+  if(m){
+    let d = parseFloat(m[1]), mi = parseFloat(m[2]||0), se = parseFloat(m[3]||0);
+    return sign * toDecimal(Math.abs(d), mi, se);
+  }
+
+  // DDM e.g. 37° 20.317'  OR 121 53.178
+  m = letterless.match(/(-?\d+(?:\.\d+)?)\s*[°d]?\s+(\d+(?:\.\d+)?)\s*['’m]?/i);
+  if(m){
+    let d = parseFloat(m[1]), mi = parseFloat(m[2]||0);
+    return sign * (Math.abs(d) + (mi/60));
+  }
+
+  // DD e.g. -121.8861
+  m = letterless.match(/-?\d+(?:\.\d+)?/);
+  if(m){
+    return sign * Math.abs(parseFloat(m[0]));
+  }
+
+  throw new Error("Could not parse coordinate: " + coord);
+}
+
+/* Extract a coordinate pair from any mixed string */
+function parsePair(raw){
+  let s = cleanup(raw);
+
+  // Split on common pair separators first
+  // If there are explicit N/S/E/W, we'll find them regardless of order.
+  // Otherwise assume first is latitude, second longitude.
+  // Try to locate two coord chunks.
+  const parts = s
+    .replace(/;/g, ',')
+    .replace(/\s+\|\s+/g, ',')
+    .split(/,(?![^()]*\))|(?:\s{2,})/)
+    .filter(Boolean);
+
+  // Strategy 1: look for tokens with NSEW to identify individually
+  let withLetters = s.match(/[^,;]+?[NSEW]/gi);
+  if(withLetters && withLetters.length >= 2){
+    // find N/S (lat) and E/W (lon)
+    let latToken = withLetters.find(t=>/[NS]/i.test(t));
+    let lonToken = withLetters.find(t=>/[EW]/i.test(t));
+    if(latToken && lonToken){
+      return [parseOne(latToken), parseOne(lonToken)];
+    }
+  }
+
+  // Strategy 2: try to find two numeric sequences in order
+  // Build a naive list of candidate chunks by splitting on comma or whitespace runs
+  let candidates = s.split(/[,;]/).map(t=>t.trim()).filter(Boolean);
+  if(candidates.length >= 2){
+    try{
+      let first = parseOne(candidates[0]);
+      let second = parseOne(candidates[1]);
+      return [first, second];
+    }catch{ /* continue */ }
+  }
+
+  // Strategy 3: fallback — extract two highest-confidence matches using regex windows
+  const guess = s.match(/(-?\d+(?:\.\d+)?(?:\s*[°d]\s*\d+(?:\.\d+)?(?:\s*['’m]\s*\d+(?:\.\d+)?)?["”s]?)?\s*[NSEW]?)/gi);
+  if(guess && guess.length >= 2){
+    return [parseOne(guess[0]), parseOne(guess[1])];
+  }
+
+  throw new Error("Couldn't find a coordinate pair.");
+}
+
+function formatDD(lat, lon, digits=6){
+  // ForeFlight-friendly: decimal degrees, signed, 6 decimals
+  const r = (n)=> (Math.round(n * 10**digits) / 10**digits).toFixed(digits);
+  return `${r(lat)}, ${r(lon)}`;
+}
+
+/* ---------- UI Wiring ---------- */
+const input = document.getElementById('input');
+const output = document.getElementById('output');
+
+document.getElementById('convert').addEventListener('click', ()=>{
+  try{
+    const [lat, lon] = parsePair(input.value);
+    output.textContent = formatDD(lat, lon);
+    output.dataset.ok = "1";
+  }catch(err){
+    output.textContent = "Error: " + err.message;
+    delete output.dataset.ok;
+  }
+});
+
+document.getElementById('copy').addEventListener('click', async ()=>{
+  const text = output.textContent.trim();
+  if(!text){ return; }
+  try{
+    await navigator.clipboard.writeText(text);
+    const old = output.textContent;
+    output.textContent = "Copied: " + text;
+    setTimeout(()=>{ output.textContent = old; }, 800);
+  }catch{
+    alert("Couldn't copy. Long-press the blue box to select and copy.");
+  }
+});
+
+document.getElementById('clear').addEventListener('click', ()=>{
+  input.value = "";
+  output.textContent = "";
+});
+
+// Drag & drop zone
+const drop = document.getElementById('drop');
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{
+  e.preventDefault(); e.stopPropagation(); drop.style.background = '#f6faff';
+}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{
+  e.preventDefault(); e.stopPropagation(); drop.style.background = '#fbfdff';
+}));
+drop.addEventListener('drop', async (e)=>{
+  const dt = e.dataTransfer;
+  if(!dt) return;
+  // If there's text, prefer that
+  const text = dt.getData('text');
+  if(text){
+    input.value = text;
+    return;
+  }
+  // Otherwise read first file as text
+  const file = dt.files && dt.files[0];
+  if(file){
+    const t = await file.text();
+    input.value = t;
+  }
+});
+
+// Optional service worker (safe if missing)
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
