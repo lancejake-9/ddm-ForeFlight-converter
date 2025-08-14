@@ -1,224 +1,225 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Any → ForeFlight (DDM)</title>
-  <meta name="description" content="Paste any common coordinates (DD, DDM, DMS) and convert to ForeFlight-friendly DDM." />
-  <link rel="manifest" href="manifest.webmanifest">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Any → ForeFlight (DD)</title>
   <meta name="theme-color" content="#0b3d91">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png">
   <style>
-    :root { --bg:#f6f7fb; --ink:#0b2149; --muted:#5a6b8a; --brand:#123bde; --panel:#fff; --ok:#0f8b2c; --warn:#b8860b; }
-    html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-    .wrap{max-width:780px;margin:22px auto;padding:0 16px}
-    h1{font-size:28px;margin:8px 0 6px}
-    .chip{display:inline-block;font-size:12px;padding:.2rem .55rem;border-radius:999px;background:#eaf0ff;color:#2441ff;margin-left:.5rem;vertical-align:3px}
-    .badge{display:inline-flex;gap:6px;align-items:center;font-size:12px;padding:.25rem .55rem;border-radius:999px;background:#e7f9ec;color:#0a6b22;margin-left:.5rem}
-    .sub{color:var(--muted);line-height:1.35;margin:6px 0 10px}
-    ul{margin:.25rem 0 .5rem 1.1rem;color:var(--muted)}
-    textarea, .out {width:100%;box-sizing:border-box;border:1px solid #dbe1f1;border-radius:12px;background:var(--panel);font-size:16px;line-height:1.35;padding:14px 14px;resize:vertical;min-height:140px}
-    .row{display:flex;gap:12px;flex-wrap:wrap;margin:14px 0}
-    button{appearance:none;border:0;border-radius:12px;padding:14px 18px;font-weight:600;cursor:pointer}
-    .primary{background:var(--brand);color:#fff}
-    .ghost{background:#edf1ff;color:#1a34c9}
-    .soft{background:#eef2f9;color:#2b3b59}
-    .mut{background:#eef2f9;color:#384860}
-    .panel{background:var(--panel);border:1px solid #e2e7f3;border-radius:14px;padding:10px 12px}
-    .status{border-left:6px solid var(--warn);padding:10px 12px;border-radius:12px;background:#fff8e6;white-space:pre-wrap}
-    .stats{color:var(--muted);font-size:13px;margin-top:6px}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-    .footer{color:#8aa; font-size:12px; margin:22px 2px}
-    details summary{cursor:pointer;font-weight:600}
-    .tips li{margin:.25rem 0}
-    .ok{color:#0a6b22;font-weight:600}
+    :root{--bg:#0a0f1c;--card:#0f1834;--txt:#e9eef8;--muted:#9fb0d0;--accent:#5cc8ff}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+    header{position:sticky;top:0;background:linear-gradient(#0a0f1c,#0a0f1ccc 60%,transparent);
+      backdrop-filter:saturate(140%) blur(6px);padding:14px 16px 8px;z-index:5;border-bottom:1px solid #1b2744}
+    h1{font-size:18px;margin:0 0 6px}
+    .pills{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+    .pill{font-size:12px;background:#1a2443;color:#a7b7d9;border:1px solid #293a66;border-radius:999px;
+      padding:3px 9px;display:inline-flex;gap:6px;align-items:center;white-space:nowrap}
+    .pill.ok{background:#103123;color:#d7ffe7;border-color:#1f5c44}
+    main{padding:16px}
+    .card{background:var(--card);border:1px solid #203463;border-radius:14px;padding:14px}
+    textarea{width:100%;min-height:150px;background:#0c1430;color:var(--txt);border:1px solid #223969;
+      border-radius:10px;padding:12px;font:15px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    .btns{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}
+    button{background:#1a2a57;border:1px solid #2e4a8e;color:#e7eeff;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer}
+    button:active{transform:translateY(1px)}
+    .out{white-space:pre; font:16px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#0b1433;border:1px solid #233a70;border-radius:12px;padding:12px;min-height:110px}
+    .muted{color:var(--muted)}
+    .row{display:grid;gap:12px}
+    @media(min-width:860px){.row{grid-template-columns:1fr 1fr}}
+    .footer{color:#94a7cc;font-size:13px;margin-top:12px}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>Any → ForeFlight (DDM)
-      <span class="chip">auto-detect</span>
-      <span class="badge">✔ offline ready · v1.9.1</span>
-    </h1>
-    <div class="sub">
-      Paste any common format (DD, DDM, DMS) with N/S/E/W or ± signs. One pair per line. Output is ForeFlight-ready DDM like
-      <span class="mono">46 37.230 N, 122 20.958 W</span>.
-      <ul class="mono">
-        <li>46.6205, -122.3493</li>
-        <li>N46° 37.230', W122° 20.958'</li>
-        <li>46 37 13.8 N, 122 20 57.5 W</li>
-        <li>46 37.230  -122 20.958</li>
-        <li>N46.6205  W122.3493</li>
-      </ul>
+  <header>
+    <h1>Any → ForeFlight (DD)</h1>
+    <div class="pills">
+      <span class="pill">auto-detect</span>
+      <span id="offlinePill" class="pill ok">offline ready · v1.9.3</span>
     </div>
+    <div class="muted">Paste any common format (DD, DDM, DMS) with N/S/E/W or ±. One pair per line. Output is ForeFlight‑ready <b>decimal degrees</b> like <code>46.6205, -122.3493</code>.</div>
+    <ul class="muted" style="margin:8px 0 0 18px">
+      <li>46.6205, −122.3493</li>
+      <li>N46° 37.230', W122° 20.958'</li>
+      <li>46 37 13.8 N, 122 20 57.5 W</li>
+      <li>46 37.230  -122 20.958</li>
+      <li>N46.6205 W122.3493</li>
+    </ul>
+  </header>
 
-    <textarea id="inp" placeholder="Paste coordinates here..."></textarea>
-
+  <main>
     <div class="row">
-      <button class="primary" id="btnConvert">Convert</button>
-      <button class="ghost" id="btnCopy">Copy output</button>
-      <button class="soft" id="btnTest">Paste test set</button>
-      <button class="mut" id="btnClear">Clear</button>
+      <section class="card">
+        <textarea id="inp" placeholder="Paste coordinates here..."></textarea>
+        <div class="btns">
+          <button id="btnConvert">Convert</button>
+          <button id="btnCopy">Copy output</button>
+          <button id="btnClear">Clear</button>
+        </div>
+        <div id="out" class="out"></div>
+        <div id="summary" class="muted" style="margin-top:8px"></div>
+      </section>
     </div>
 
-    <div class="panel">
-      <pre id="out" class="out mono" aria-live="polite"></pre>
-      <div id="stats" class="stats"></div>
+    <div class="card footer">
+      <div>📲 Tips: Add to Home Screen (works offline)</div>
+      <div class="muted">Built for helicopter pilots—fast paste → clean DD output. No data leaves your device.</div>
     </div>
-
-    <details class="panel" style="margin-top:12px">
-      <summary>📲 Tips: Add to Home Screen (works offline)</summary>
-      <div class="sub">
-        <ul class="tips">
-          <li><strong>iPhone/iPad (Safari):</strong> Tap <em>Share</em> → <em>Add to Home Screen</em>. Open from the icon. It will cache and work offline.</li>
-          <li><strong>Android (Chrome):</strong> ⋮ menu → <em>Install app</em> or <em>Add to Home screen</em>.</li>
-          <li>When you see <span class="ok">✔ offline ready</span>, the service worker is active. If you update files, refresh twice to get the new version.</li>
-        </ul>
-      </div>
-    </details>
-
-    <div class="footer">
-      Built for helicopter pilots—fast paste → clean DDM output. No data leaves your device.
-    </div>
-  </div>
+  </main>
 
 <script>
-(function(){
+// --- Utility: normalize weird Unicode symbols and whitespace ---
+function normalizeSymbols(s){
+  if(!s) return "";
+  return s
+    .replace(/[−–—]/g, "-")      // en/em dashes → hyphen
+    .replace(/[′’ʻ`´]/g, "'")    // prime/minute/curly → '
+    .replace(/[″”]/g, '"')       // double prime → "
+    .replace(/[°º˚]/g, "°")      // degree symbol variants
+    .replace(/\s+/g, " ")        // collapse spaces
+    .replace(/,\s*/g, ", ")      // tidy commas
+    .trim();
+}
 
-  const inp = document.getElementById('inp');
-  const out = document.getElementById('out');
-  const stats = document.getElementById('stats');
+// Parse a single DMS or DDM chunk into decimal degrees
+function dmsToDD(d, m=0, s=0){
+  d = parseFloat(d||0); m = parseFloat(m||0); s = parseFloat(s||0);
+  const sign = d < 0 ? -1 : 1;
+  return sign * (Math.abs(d) + (Math.abs(m)/60) + (Math.abs(s)/3600));
+}
 
-  function ddToDDM(dd, isLat) {
-    const sign = dd < 0 ? -1 : 1;
-    dd = Math.abs(dd);
-    const deg = Math.floor(dd);
-    const min = (dd - deg) * 60;
-    const hemi = isLat ? (sign < 0 ? 'S' : 'N') : (sign < 0 ? 'W' : 'E');
-    return {deg, min, hemi};
+// Try to parse one latitude or longitude token group
+function parseOne(coordStr){
+  const s = normalizeSymbols(coordStr).toUpperCase();
+
+  // Detect hemisphere
+  let hemi = null;
+  if(/[NSEW]/.test(s)) hemi = s.match(/[NSEW]/)[0];
+
+  // Extract numbers possibly marked with ° ' "
+  // Cases: D° M' S" | D° M.M' | D.DD° | D M S | D M.M | D.DD
+  const re = /(-?\d+(?:\.\d+)?)\s*(?:°)?\s*(?:(\d+(?:\.\d+)?)\s*(?:'|M)?\s*)?(?:(\d+(?:\.\d+)?)\s*(?:"|S)?\s*)?/;
+  const m = s.match(re);
+  if(!m) return null;
+  let [_, d, mi, se] = m;
+  let dd;
+  if(typeof mi === "undefined" || mi === undefined){
+    dd = parseFloat(d); // pure decimal degrees
+  } else if(typeof se === "undefined" || se === undefined){
+    dd = dmsToDD(d, mi, 0);      // DDM
+  } else {
+    dd = dmsToDD(d, mi, se);     // DMS
   }
 
-  function dmsToDDM(deg, min, sec, hemi, isLat) {
-    const sign = (hemi||'').toUpperCase();
-    const signed = (sign==='S' || sign==='W') ? -1 : 1;
-    const total = Math.abs(deg) + Math.abs(min)/60 + Math.abs(sec)/3600;
-    const ddm = ddToDDM(total * signed, isLat);
-    return ddm;
-  }
+  if(hemi === "S" || hemi === "W") dd = -Math.abs(dd);
+  return dd;
+}
 
-  function clampDeg(deg, isLat) {
-    const max = isLat ? 90 : 180;
-    return Math.min(Math.max(deg, 0), max);
-  }
+// Attempt to split a line into lat/lon parts using direction letters or commas/spaces
+function parseLineToDD(line){
+  let s = normalizeSymbols(line).toUpperCase();
+  if(!s) return null;
 
-  function formatDDM({deg, min, hemi}, isLat) {
-    const d = clampDeg(deg, isLat);
-    const m = Math.round(min * 1000) / 1000; // 3 decimals
-    return `${d} ${m.toFixed(3)} ${hemi}`;
-  }
+  // If both N/S and E/W present, split by them
+  const latDir = s.match(/[NS]/);
+  const lonDir = s.match(/[EW]/);
 
-  // Regexes
-  // DD with signs or hemispheres: "46.62, -122.34" or "N46.62 W122.34"
-  const reDD = /([NS])?\s*(-?\d+(?:\.\d+)?)\s*[,\s]+([EW])?\s*(-?\d+(?:\.\d+)?)/i;
-
-  // DDM: "46 37.230 N, 122 20.958 W" or with symbols
-  const reDDM = /(\d{1,3})[°\s]+(\d+(?:\.\d+)?)['′]?\s*([NS])?\s*[,\s]+(\d{1,3})[°\s]+(\d+(?:\.\d+)?)['′]?\s*([EW])?/i;
-
-  // DMS: "46 37 13.8 N, 122 20 57.5 W" (symbols optional)
-  const reDMS = /(\d{1,3})[°\s]+(\d{1,2})[′'\s]+(\d+(?:\.\d+)?)[″"\s]*([NS])?\s*[,\s]+(\d{1,3})[°\s]+(\d{1,2})[′'\s]+(\d+(?:\.\d+)?)[″"\s]*([EW])?/i;
-
-  function parseLine(line) {
-    const s = line.trim()
-      .replace(/[;|]+/g, ' ')
-      .replace(/\s{2,}/g, ' ');
-
-    if (!s) return {type:'empty'};
-
-    // Try DMS first (most specific)
-    let m = s.match(reDMS);
-    if (m) {
-      const lat = dmsToDDM(parseFloat(m[1]), parseFloat(m[2]), parseFloat(m[3]), m[4]||'N', true);
-      const lon = dmsToDDM(parseFloat(m[5]), parseFloat(m[6]), parseFloat(m[7]), m[8]||'E', false);
-      return {type:'dms', lat, lon};
+  if(latDir && lonDir){
+    // ensure latitude part comes first
+    const latIdx = s.indexOf(latDir[0]);
+    const lonIdx = s.indexOf(lonDir[0]);
+    if(latIdx < lonIdx){
+      const latPart = s.slice(0, lonIdx).trim().replace(/[;,]/g," ");
+      const lonPart = s.slice(lonIdx).trim();
+      return [ parseOne(latPart), parseOne(lonPart) ];
+    }else{
+      const lonPart = s.slice(0, latIdx).trim().replace(/[;,]/g," ");
+      const latPart = s.slice(latIdx).trim();
+      return [ parseOne(latPart), parseOne(lonPart) ];
     }
-
-    // Then DDM
-    m = s.match(reDDM);
-    if (m) {
-      const lat = {deg: parseFloat(m[1]), min: parseFloat(m[2]), hemi: (m[3]||'N').toUpperCase()};
-      const lon = {deg: parseFloat(m[4]), min: parseFloat(m[5]), hemi: (m[6]||'E').toUpperCase()};
-      return {type:'ddm', lat, lon};
-    }
-
-    // Finally DD
-    m = s.match(reDD);
-    if (m) {
-      // Allow hemispheres OR signs
-      let lat = parseFloat(m[2]);
-      let lon = parseFloat(m[4]);
-      if (m[1]) lat = (m[1].toUpperCase()==='S') ? -Math.abs(lat) : Math.abs(lat);
-      if (m[3]) lon = (m[3].toUpperCase()==='W') ? -Math.abs(lon) : Math.abs(lon);
-      const latD = ddToDDM(lat, true);
-      const lonD = ddToDDM(lon, false);
-      return {type:'dd', lat: latD, lon: lonD};
-    }
-
-    return {type:'error', reason:'Parse error'};
   }
 
-  function convertAll(text) {
-    const lines = text.split(/\r?\n/);
-    let ok = 0, skipped = 0, outLines = [], notes = [];
-    for (const line of lines) {
-      const r = parseLine(line);
-      if (r.type === 'empty') { skipped++; continue; }
-      if (r.type === 'error') { 
-        notes.push(`⚠️ Parse error:  ${line}`); 
-        skipped++; 
-        continue; 
-      }
-      const latStr = formatDDM(r.lat, true);
-      const lonStr = formatDDM(r.lon, false);
-      outLines.push(`${latStr}, ${lonStr}`);
-      ok++;
+  // No N/S/E/W: assume "lat, lon" or "lat lon"
+  // Split by comma first
+  let parts = s.split(/[,;]/).map(t=>t.trim()).filter(Boolean);
+  if(parts.length === 2){
+    return [ parseOne(parts[0]), parseOne(parts[1]) ];
+  }
+  // Try splitting by space groups; take first 3 numeric tokens as lat, next 3 as lon
+  const nums = s.match(/-?\d+(?:\.\d+)?/g);
+  if(nums && (nums.length===2 || nums.length===4 || nums.length===6)){
+    // Try to infer by sign: if any negative is present, likely lon is negative in western hemisphere
+    // Assume first half is lat, second is lon
+    const half = nums.length/2;
+    const latTokens = nums.slice(0, half).join(" ");
+    const lonTokens = nums.slice(half).join(" ");
+    return [ parseOne(latTokens), parseOne(lonTokens) ];
+  }
+
+  return null;
+}
+
+// Format to ForeFlight‑friendly "lat, lon" with fixed precision
+function fmtDD(lat, lon){
+  if(!isFinite(lat) || !isFinite(lon)) return null;
+  // Clamp
+  if(Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
+  return `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+}
+
+// UI wiring
+const elIn = document.getElementById('inp');
+const elOut = document.getElementById('out');
+const elSummary = document.getElementById('summary');
+
+document.getElementById('btnConvert').addEventListener('click', () => {
+  const lines = normalizeSymbols(elIn.value).split(/\n/);
+  let outLines = [];
+  let converted = 0, skipped = 0;
+  lines.forEach(line => {
+    const trimmed = line.trim();
+    if(!trimmed){ return; }
+    const pair = parseLineToDD(trimmed);
+    if(pair && isFinite(pair[0]) && isFinite(pair[1])){
+      const s = fmtDD(pair[0], pair[1]);
+      if(s){ outLines.push(s); converted++; } else { skipped++; }
+    } else {
+      skipped++;
     }
-    return {text: outLines.join('\n'), ok, skipped, notes};
-  }
-
-  function setOutput(res) {
-    out.textContent = res.text + (res.notes.length ? 
-      (res.text ? '\n\n' : '') + res.notes.join('\n') : '');
-    stats.textContent = `${res.ok} converted, ${res.skipped} skipped — ${(res.ok+res.skipped)} line(s) processed.`;
-  }
-
-  // Buttons
-  document.getElementById('btnConvert').addEventListener('click', () => {
-    setOutput(convertAll(inp.value));
   });
-  document.getElementById('btnCopy').addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText(out.textContent); stats.textContent = 'Copied output.'; }
-    catch(e) { stats.textContent = 'Copy failed.'; }
-  });
-  document.getElementById('btnTest').addEventListener('click', () => {
-    inp.value = [
-      "46.6205, -122.3493",
-      "N46° 37.230', W122° 20.958'",
-      "46 37 13.8 N, 122 20 57.5 W",
-      "46 37.230  -122 20.958",
-      "N46.6205  W122.3493"
-    ].join("\n");
-  });
-  document.getElementById('btnClear').addEventListener('click', () => { inp.value=''; setOutput({text:'',ok:0,skipped:0,notes:[]}); });
+  elOut.textContent = outLines.join("\n");
+  elSummary.textContent = `${converted} converted, ${skipped} skipped — ${lines.filter(l=>l.trim()).length} line(s) processed.`;
+});
 
-  // Auto register SW
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js?v=1.9.1').catch(console.error);
-    });
+document.getElementById('btnCopy').addEventListener('click', async () => {
+  const txt = elOut.textContent.trim();
+  if(!txt) return;
+  try{
+    await navigator.clipboard.writeText(txt);
+    alert('Output copied.');
+  }catch(e){
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = txt; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    alert('Output copied.');
   }
-})();
+});
+
+document.getElementById('btnClear').addEventListener('click', () => {
+  elIn.value=''; elOut.textContent=''; elSummary.textContent='';
+});
+
+// Service worker registration (uses existing sw if present)
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+  });
+}
 </script>
 </body>
 </html>
