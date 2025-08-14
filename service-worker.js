@@ -1,42 +1,74 @@
-/* SERVICE WORKER KILL SWITCH
-   Purpose: blow away ALL caches, unregister this SW, and reload clients so the site fetches fresh files.
-   Use temporarily. After it runs once, replace with your normal service-worker.js.
-*/
+/* Normal offline-capable service worker for DDM → ForeFlight Converter */
+const CACHE_VERSION = 'v4-2025-08-14';
+const CACHE_NAME = `ddm-ff-cache-${CACHE_VERSION}`;
+
+// Core files to precache
+const CORE_ASSETS = [
+  './',
+  './index.html',
+  './offline.html',
+  './manifest.webmanifest',
+  './icons/apple-touch-icon-180.png'
+];
+
 self.addEventListener('install', (event) => {
-  // Activate immediately
-  self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(CORE_ASSETS))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil((async () => {
-    // 1) Delete ALL caches
-    try {
-      const keys = await caches.keys();
-      await Promise.all(keys.map((k) => caches.delete(k)));
-    } catch (e) {
-      // ignore
-    }
-
-    // 2) Unregister THIS service worker
-    try {
-      await self.registration.unregister();
-    } catch (e) {
-      // ignore
-    }
-
-    // 3) Claim clients and force a reload so pages get a fresh, no-SW version
-    try {
-      const allClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-      for (const client of allClients) {
-        client.navigate(client.url);
-      }
-    } catch (e) {
-      // ignore
-    }
-  })());
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.map((k) => k !== CACHE_NAME ? caches.delete(k) : null))
+    ).then(() => self.clients.claim())
+  );
 });
 
-// 4) While this SW is active, do NOT serve from cache; always go to network
+function isNavRequest(request) {
+  return request.mode === 'navigate' ||
+         (request.method === 'GET' &&
+          request.headers.get('accept') &&
+          request.headers.get('accept').includes('text/html'));
+}
+
+async function networkFirst(event) {
+  try {
+    const fresh = await fetch(event.request);
+    const cache = await caches.open(CACHE_NAME);
+    cache.put(event.request, fresh.clone());
+    return fresh;
+  } catch (err) {
+    const cache = await caches.open(CACHE_NAME);
+    const cached = await cache.match(event.request);
+    return cached || cache.match('./offline.html');
+  }
+}
+
+async function cacheFirst(event) {
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(event.request);
+  if (cached) return cached;
+  try {
+    const fresh = await fetch(event.request, { credentials: 'same-origin' });
+    cache.put(event.request, fresh.clone());
+    return fresh;
+  } catch (err) {
+    if (event.request.destination === 'document') {
+      return cache.match('./offline.html');
+    }
+    return new Response('', { status: 504, statusText: 'Offline' });
+  }
+}
+
 self.addEventListener('fetch', (event) => {
-  event.respondWith(fetch(event.request));
+  const req = event.request;
+  if (req.method !== 'GET') return;
+  if (isNavRequest(req)) {
+    event.respondWith(networkFirst(event));
+    return;
+  }
+  event.respondWith(cacheFirst(event));
 });
