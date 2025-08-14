@@ -4,34 +4,32 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Any → ForeFlight (DD)</title>
-  <meta name="theme-color" content="#0b3d91">
+  <meta name="theme-color" content="#ffffff">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png">
   <style>
-    :root{--bg:#0a0f1c;--card:#0f1834;--txt:#e9eef8;--muted:#9fb0d0;--accent:#5cc8ff}
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
-    header{position:sticky;top:0;background:linear-gradient(#0a0f1c,#0a0f1ccc 60%,transparent);
-      backdrop-filter:saturate(140%) blur(6px);padding:14px 16px 8px;z-index:5;border-bottom:1px solid #1b2744}
-    h1{font-size:18px;margin:0 0 6px}
+    body{margin:0;background:#f8f9fa;color:#000;font:17px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+    header{position:sticky;top:0;background:#fff;padding:14px 16px 8px;z-index:5;border-bottom:1px solid #ccc}
+    h1{font-size:20px;margin:0 0 6px}
     .pills{display:flex;gap:8px;align-items:center;margin-bottom:6px}
-    .pill{font-size:12px;background:#1a2443;color:#a7b7d9;border:1px solid #293a66;border-radius:999px;
+    .pill{font-size:12px;background:#e0e0e0;color:#000;border:1px solid #999;border-radius:999px;
       padding:3px 9px;display:inline-flex;gap:6px;align-items:center;white-space:nowrap}
-    .pill.ok{background:#103123;color:#d7ffe7;border-color:#1f5c44}
+    .pill.ok{background:#d4f8d4;color:#064d06;border-color:#0a6e0a}
     main{padding:16px}
-    .card{background:var(--card);border:1px solid #203463;border-radius:14px;padding:14px}
-    textarea{width:100%;min-height:150px;background:#0c1430;color:var(--txt);border:1px solid #223969;
-      border-radius:10px;padding:12px;font:15px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    .card{background:#fff;border:1px solid #bbb;border-radius:8px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,0.1)}
+    textarea{width:100%;min-height:150px;background:#fff;color:#000;border:1px solid #888;
+      border-radius:6px;padding:12px;font:16px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
     .btns{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}
-    button{background:#1a2a57;border:1px solid #2e4a8e;color:#e7eeff;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer}
+    button{background:#1976d2;border:1px solid #115293;color:#fff;border-radius:6px;padding:10px 14px;font-weight:600;cursor:pointer}
+    button:hover{background:#1565c0}
     button:active{transform:translateY(1px)}
-    .out{white-space:pre; font:16px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#0b1433;border:1px solid #233a70;border-radius:12px;padding:12px;min-height:110px}
-    .muted{color:var(--muted)}
+    .out{white-space:pre; font:16px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#f1f3f5;border:1px solid #888;border-radius:6px;padding:12px;min-height:110px;color:#000}
+    .muted{color:#555}
     .row{display:grid;gap:12px}
     @media(min-width:860px){.row{grid-template-columns:1fr 1fr}}
-    .footer{color:#94a7cc;font-size:13px;margin-top:12px}
+    .footer{color:#555;font-size:13px;margin-top:12px}
   </style>
 </head>
 <body>
@@ -39,16 +37,9 @@
     <h1>Any → ForeFlight (DD)</h1>
     <div class="pills">
       <span class="pill">auto-detect</span>
-      <span id="offlinePill" class="pill ok">offline ready · v1.9.3</span>
+      <span id="offlinePill" class="pill ok">offline ready · v2.0</span>
     </div>
-    <div class="muted">Paste any common format (DD, DDM, DMS) with N/S/E/W or ±. One pair per line. Output is ForeFlight‑ready <b>decimal degrees</b> like <code>46.6205, -122.3493</code>.</div>
-    <ul class="muted" style="margin:8px 0 0 18px">
-      <li>46.6205, −122.3493</li>
-      <li>N46° 37.230', W122° 20.958'</li>
-      <li>46 37 13.8 N, 122 20 57.5 W</li>
-      <li>46 37.230  -122 20.958</li>
-      <li>N46.6205 W122.3493</li>
-    </ul>
+    <div class="muted">Paste any common format (DD, DDM, DMS) with N/S/E/W or ±. One pair per line. Output is ForeFlight-ready <b>decimal degrees</b> like <code>46.6205, -122.3493</code>.</div>
   </header>
 
   <main>
@@ -56,145 +47,110 @@
       <section class="card">
         <textarea id="inp" placeholder="Paste coordinates here..."></textarea>
         <div class="btns">
-          <button id="btnConvert">Convert</button>
-          <button id="btnCopy">Copy output</button>
-          <button id="btnClear">Clear</button>
+          <button id="btnConvert" type="button">Convert</button>
+          <button id="btnCopy" type="button">Copy output</button>
+          <button id="btnClear" type="button">Clear</button>
         </div>
         <div id="out" class="out"></div>
         <div id="summary" class="muted" style="margin-top:8px"></div>
       </section>
     </div>
-
     <div class="card footer">
-      <div>📲 Tips: Add to Home Screen (works offline)</div>
-      <div class="muted">Built for helicopter pilots—fast paste → clean DD output. No data leaves your device.</div>
+      📲 Add to Home Screen (works offline)
     </div>
   </main>
 
 <script>
-// --- Utility: normalize weird Unicode symbols and whitespace ---
 function normalizeSymbols(s){
   if(!s) return "";
   return s
-    .replace(/[−–—]/g, "-")      // en/em dashes → hyphen
-    .replace(/[′’ʻ`´]/g, "'")    // prime/minute/curly → '
-    .replace(/[″”]/g, '"')       // double prime → "
-    .replace(/[°º˚]/g, "°")      // degree symbol variants
-    .replace(/\s+/g, " ")        // collapse spaces
-    .replace(/,\s*/g, ", ")      // tidy commas
+    .replace(/[−–—]/g, "-")
+    .replace(/[′’ʻ`´]/g, "'")
+    .replace(/[″”]/g, '"')
+    .replace(/[°º˚]/g, "°")
+    .replace(/\s+/g, " ")
+    .replace(/,\s*/g, ", ")
     .trim();
 }
-
-// Parse a single DMS or DDM chunk into decimal degrees
 function dmsToDD(d, m=0, s=0){
   d = parseFloat(d||0); m = parseFloat(m||0); s = parseFloat(s||0);
   const sign = d < 0 ? -1 : 1;
   return sign * (Math.abs(d) + (Math.abs(m)/60) + (Math.abs(s)/3600));
 }
-
-// Try to parse one latitude or longitude token group
 function parseOne(coordStr){
   const s = normalizeSymbols(coordStr).toUpperCase();
-
-  // Detect hemisphere
   let hemi = null;
   if(/[NSEW]/.test(s)) hemi = s.match(/[NSEW]/)[0];
-
-  // Extract numbers possibly marked with ° ' "
-  // Cases: D° M' S" | D° M.M' | D.DD° | D M S | D M.M | D.DD
   const re = /(-?\d+(?:\.\d+)?)\s*(?:°)?\s*(?:(\d+(?:\.\d+)?)\s*(?:'|M)?\s*)?(?:(\d+(?:\.\d+)?)\s*(?:"|S)?\s*)?/;
   const m = s.match(re);
   if(!m) return null;
   let [_, d, mi, se] = m;
   let dd;
-  if(typeof mi === "undefined" || mi === undefined){
-    dd = parseFloat(d); // pure decimal degrees
-  } else if(typeof se === "undefined" || se === undefined){
-    dd = dmsToDD(d, mi, 0);      // DDM
+  if(mi===undefined){
+    dd = parseFloat(d);
+  } else if(se===undefined){
+    dd = dmsToDD(d, mi, 0);
   } else {
-    dd = dmsToDD(d, mi, se);     // DMS
+    dd = dmsToDD(d, mi, se);
   }
-
   if(hemi === "S" || hemi === "W") dd = -Math.abs(dd);
   return dd;
 }
-
-// Attempt to split a line into lat/lon parts using direction letters or commas/spaces
 function parseLineToDD(line){
   let s = normalizeSymbols(line).toUpperCase();
   if(!s) return null;
-
-  // If both N/S and E/W present, split by them
   const latDir = s.match(/[NS]/);
   const lonDir = s.match(/[EW]/);
-
   if(latDir && lonDir){
-    // ensure latitude part comes first
     const latIdx = s.indexOf(latDir[0]);
     const lonIdx = s.indexOf(lonDir[0]);
     if(latIdx < lonIdx){
       const latPart = s.slice(0, lonIdx).trim().replace(/[;,]/g," ");
       const lonPart = s.slice(lonIdx).trim();
       return [ parseOne(latPart), parseOne(lonPart) ];
-    }else{
+    } else {
       const lonPart = s.slice(0, latIdx).trim().replace(/[;,]/g," ");
       const latPart = s.slice(latIdx).trim();
       return [ parseOne(latPart), parseOne(lonPart) ];
     }
   }
-
-  // No N/S/E/W: assume "lat, lon" or "lat lon"
-  // Split by comma first
   let parts = s.split(/[,;]/).map(t=>t.trim()).filter(Boolean);
   if(parts.length === 2){
     return [ parseOne(parts[0]), parseOne(parts[1]) ];
   }
-  // Try splitting by space groups; take first 3 numeric tokens as lat, next 3 as lon
   const nums = s.match(/-?\d+(?:\.\d+)?/g);
   if(nums && (nums.length===2 || nums.length===4 || nums.length===6)){
-    // Try to infer by sign: if any negative is present, likely lon is negative in western hemisphere
-    // Assume first half is lat, second is lon
     const half = nums.length/2;
     const latTokens = nums.slice(0, half).join(" ");
     const lonTokens = nums.slice(half).join(" ");
     return [ parseOne(latTokens), parseOne(lonTokens) ];
   }
-
   return null;
 }
-
-// Format to ForeFlight‑friendly "lat, lon" with fixed precision
 function fmtDD(lat, lon){
   if(!isFinite(lat) || !isFinite(lon)) return null;
-  // Clamp
   if(Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
   return `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
 }
-
-// UI wiring
 const elIn = document.getElementById('inp');
 const elOut = document.getElementById('out');
 const elSummary = document.getElementById('summary');
-
 document.getElementById('btnConvert').addEventListener('click', () => {
-  const lines = normalizeSymbols(elIn.value).split(/\n/);
+  const lines = elIn.value.split(/\n/);
   let outLines = [];
   let converted = 0, skipped = 0;
   lines.forEach(line => {
     const trimmed = line.trim();
-    if(!trimmed){ return; }
+    if(!trimmed) return;
     const pair = parseLineToDD(trimmed);
     if(pair && isFinite(pair[0]) && isFinite(pair[1])){
       const s = fmtDD(pair[0], pair[1]);
       if(s){ outLines.push(s); converted++; } else { skipped++; }
-    } else {
-      skipped++;
-    }
+    } else skipped++;
   });
   elOut.textContent = outLines.join("\n");
   elSummary.textContent = `${converted} converted, ${skipped} skipped — ${lines.filter(l=>l.trim()).length} line(s) processed.`;
 });
-
 document.getElementById('btnCopy').addEventListener('click', async () => {
   const txt = elOut.textContent.trim();
   if(!txt) return;
@@ -202,19 +158,15 @@ document.getElementById('btnCopy').addEventListener('click', async () => {
     await navigator.clipboard.writeText(txt);
     alert('Output copied.');
   }catch(e){
-    // Fallback
     const ta = document.createElement('textarea');
     ta.value = txt; document.body.appendChild(ta); ta.select();
     document.execCommand('copy'); document.body.removeChild(ta);
     alert('Output copied.');
   }
 });
-
 document.getElementById('btnClear').addEventListener('click', () => {
   elIn.value=''; elOut.textContent=''; elSummary.textContent='';
 });
-
-// Service worker registration (uses existing sw if present)
 if('serviceWorker' in navigator){
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('service-worker.js').catch(()=>{});
