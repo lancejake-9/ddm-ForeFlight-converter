@@ -1,5 +1,5 @@
-// service-worker.js (auto-updating, no manual version bumps)
-const CACHE_NAME = "foreflight-cache"; // static name — we auto-refresh contents
+// service-worker.js (enhanced auto-update + old cache cleanup)
+const CACHE_NAME = "foreflight-cache";
 const OFFLINE_URL = "offline.html";
 
 const FILES_TO_CACHE = [
@@ -8,10 +8,8 @@ const FILES_TO_CACHE = [
   "./offline.html",
   "./manifest.webmanifest",
   "./icons/apple-touch-icon-180.png"
-  // Add other assets here if needed
 ];
 
-// Precache core assets, forcing a fresh fetch
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
@@ -21,39 +19,34 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
 
-// Take control immediately
 self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
+  // Remove any old caches from previous implementations
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.map((k) => (k === CACHE_NAME ? null : caches.delete(k))))
+    )
+  );
+  self.clients.claim();
 });
 
-// Helper: cache a copy of a successful GET response
 async function cachePut(request, response) {
   try {
     const cache = await caches.open(CACHE_NAME);
     await cache.put(request, response.clone());
-  } catch (e) {
-    // ignore (opaque responses, etc.)
-  }
+  } catch {}
 }
 
-// Strategy for navigations: network-first, fall back to cache, then offline page
 self.addEventListener("fetch", (event) => {
   const req = event.request;
-
-  // Only handle GET
   if (req.method !== "GET") return;
 
-  // Navigations (HTML pages)
   if (req.mode === "navigate") {
     event.respondWith((async () => {
       try {
-        // Always try network first to pick up fresh HTML
         const networkResp = await fetch(req);
-        // Update cache in the background
         event.waitUntil(cachePut(req, networkResp.clone()));
         return networkResp;
-      } catch (err) {
-        // Offline or failed — fall back to cached page, or offline.html
+      } catch {
         const cache = await caches.open(CACHE_NAME);
         const cached = await cache.match(req);
         return cached || cache.match(OFFLINE_URL);
@@ -62,17 +55,26 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Other requests: stale-while-revalidate
   event.respondWith((async () => {
     const cache = await caches.open(CACHE_NAME);
     const cached = await cache.match(req);
-    const fetchPromise = fetch(req).then((networkResp) => {
-      // Update cache in background
-      event.waitUntil(cachePut(req, networkResp.clone()));
-      return networkResp;
+    const fetchPromise = fetch(req).then((resp) => {
+      event.waitUntil(cachePut(req, resp.clone()));
+      return resp;
     }).catch(() => null);
-
-    // Return cached immediately if present, else wait for network
     return cached || fetchPromise || fetch(req);
   })());
+});
+
+// Receive commands from the page
+self.addEventListener("message", (event) => {
+  const { type } = event.data || {};
+  if (type === "SKIP_WAITING") self.skipWaiting();
+  if (type === "RESET_CACHES") {
+    event.waitUntil(
+      caches.keys().then((keys) =>
+        Promise.all(keys.map((k) => caches.delete(k)))
+      )
+    );
+  }
 });
